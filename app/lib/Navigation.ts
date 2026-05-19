@@ -3,11 +3,13 @@ import { useRouter } from "next/navigation";
 
 export type NavigationAction =
   | "signIn"
-  | "signUp";
+  | "signUp"
+  | "dashboard";
 
 const ROUTES: Record<NavigationAction, string> = {
-  signIn: "/SignInPage",
-  signUp: "/SignUpPage",
+  signIn: "/src/auth/sign-in",
+  signUp: "/src/auth/sign-up",
+  dashboard: "/src/dashboard"
 };
 
 const REPLACE_ACTIONS = new Set<NavigationAction>([]);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/app/components/ui/Button";
 import { Input, PasswordInput, Checkbox } from "@/app/components/ui/Input";
 import { cn } from "@/app/lib/utils";
+import { useNavigation } from "@/app/lib/Navigation";
 
 // ─────────────────────────────────────────────────────────────
 // SignUpPage
@@ -51,6 +52,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { navigate } = useNavigation();
 
   // ── Form state ──────────────────────────────────────────────
   const [form, setForm] = useState<FormData>({
@@ -165,12 +167,12 @@ export default function SignUpPage() {
           {/* Optional extra line of text — remove if not needed */}
           <p className="text-xs text-white/40 mt-6">
             Already have an account?{" "}
-            <Link
-              href="/sign-in"
+            <button
+              onClick={() => navigate("signIn")}
               className="text-white/70 underline hover:text-white transition-colors"
             >
               Sign in here.
-            </Link>
+            </button>
           </p>
         </div>
 
@@ -333,12 +335,13 @@ export default function SignUpPage() {
               )}
             >
               Already have an account?{" "}
-              <Link
-                href="/sign-in"
+              <button
+                type="button"
+                onClick={() => navigate("signIn")} // ← fix 2: signIn not signUp
                 className="text-[#D72638] font-semibold hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30 rounded"
               >
                 Sign In
-              </Link>
+              </button>
             </div>
           </div>
         </div>

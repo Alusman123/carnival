@@ -85,7 +85,7 @@ export default function SignInPage() {
 
   // ── Continue as Admin (skips auth) ─────────────────────────
   const handleContinueAsAdmin = () => {
-    router.push("/dashboard");
+    navigate("dashboard");
   };
 
   return (
