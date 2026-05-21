@@ -1,47 +1,37 @@
 "use client";
 
-// components/AppShell.tsx
-// ─────────────────────────────────────────────────────────────
-// Shared layout wrapper for all authenticated pages.
-//
-// Structure:
-//   <AppShell>          ← wraps everything
-//     <Sidebar />       ← fixed left nav (240px wide)
-//     <main>            ← scrollable content area
-//       <Topbar />      ← sticky top bar with search + avatar
-//       {children}      ← page content injected here
-//     </main>
-//   </AppShell>
-//
-// HOW TO USE:
-//   Wrap any authenticated page with <AppShell pageTitle="...">
-//     <YourPageContent />
-//   </AppShell>
-//
-// DATA PROPS:
-//   pageTitle     → shown in the top bar (string)
-//   username      → displayed as "Welcome back, {username}" — DATA from auth
-//   notifCount    → unread notifications — DATA from notification API
-//   showSearch    → show/hide the search bar in topbar (default true)
-//   children      → page content
-// ─────────────────────────────────────────────────────────────
-
 import React, { useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/app/lib/utils";
 import { NotifBadge } from "@/app/components/ui/Badge";
-import { Logo, Avatar } from "@/app/components/ui/Misc";
-import { useNavigation } from "@/app/lib/Navigation";
+import { Avatar } from "@/app/components/ui/Misc";
+// ✅ Correct import path — matches your actual file location
+import { useNavigation, NavigationAction } from "@/app/lib/Navigation";
 
-// ── Nav item type ─────────────────────────────────────────────
+const EXPANDED_W = 240;
+const COLLAPSED_W = 72;
+
 interface NavItem {
   label: string;
-  href: string;
+  action: NavigationAction; // ← uses NavigationAction instead of raw href
   icon: React.ReactNode;
 }
 
-// ── Icons (inline SVG — swap with your icon library if needed) ─
+// ── Icons ──────────────────────────────────────────────────────
+const HamburgerIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
 const HomeIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -68,7 +58,6 @@ const DocumentIcon = () => (
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
     <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
   </svg>
 );
 const FlowIcon = () => (
@@ -224,109 +213,232 @@ const SearchIcon = () => (
   </svg>
 );
 
-// ── Nav config — HOME sidebar ──────────────────────────────────
-// Update hrefs to match your actual page routes.
+const LogoMark = () => (
+  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
+    <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
+      <rect
+        x="6"
+        y="4"
+        width="14"
+        height="18"
+        rx="2"
+        fill="#D72638"
+        opacity="0.9"
+      />
+      <rect
+        x="12"
+        y="10"
+        width="14"
+        height="18"
+        rx="2"
+        fill="#D72638"
+        opacity="0.5"
+      />
+      <line
+        x1="9"
+        y1="9"
+        x2="17"
+        y2="9"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="9"
+        y1="12"
+        x2="17"
+        y2="12"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="9"
+        y1="15"
+        x2="14"
+        y2="15"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  </div>
+);
+
+// ── Nav configs — now use NavigationAction keys, not raw hrefs ──
 export const HOME_NAV: NavItem[] = [
-  { label: "Home", href: "/", icon: <HomeIcon /> },
-  { label: "Documents", href: "/documents", icon: <DocumentIcon /> },
-  { label: "Flow Guide", href: "/flow-guide", icon: <FlowIcon /> },
-  { label: "Updates", href: "/updates", icon: <UpdatesIcon /> },
-  { label: "Feedback", href: "/feedback", icon: <FeedbackIcon /> },
+  { label: "Home", action: "home", icon: <HomeIcon /> },
+  { label: "Documents", action: "documents", icon: <DocumentIcon /> },
+  { label: "Flow Guide", action: "flowGuide", icon: <FlowIcon /> },
+  { label: "Updates", action: "updates", icon: <UpdatesIcon /> },
+  { label: "Feedback", action: "feedback", icon: <FeedbackIcon /> },
 ];
 
-// ── Nav config — DASHBOARD sidebar ─────────────────────────────
 export const DASHBOARD_NAV: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: <DashboardIcon /> },
-  { label: "Documents", href: "/dashboard/documents", icon: <DocumentIcon /> },
-  { label: "Access", href: "/dashboard/access", icon: <AccessIcon /> },
-  { label: "Feedback", href: "/dashboard/feedback", icon: <FeedbackIcon /> },
-  { label: "Users", href: "/dashboard/users", icon: <UsersIcon /> },
-  { label: "Reports", href: "/dashboard/reports", icon: <ReportsIcon /> },
-  { label: "Settings", href: "/dashboard/settings", icon: <SettingsIcon /> },
+  { label: "Dashboard", action: "dashboard", icon: <DashboardIcon /> },
+  { label: "Documents", action: "dashboardDocuments", icon: <DocumentIcon /> },
+  { label: "Access", action: "dashboardAccess", icon: <AccessIcon /> },
+  { label: "Feedback", action: "dashboardFeedback", icon: <FeedbackIcon /> },
+  { label: "Users", action: "dashboardUsers", icon: <UsersIcon /> },
+  { label: "Reports", action: "dashboardReports", icon: <ReportsIcon /> },
+  { label: "Settings", action: "dashboardSettings", icon: <SettingsIcon /> },
 ];
-
-// ── AppShell props ─────────────────────────────────────────────
-export interface AppShellProps {
-  children: React.ReactNode;
-  // DATA props — replace with real values from your auth/notification context
-  username?: string; // DATA: from auth context (e.g. useAuth().user.name)
-  notifCount?: number; // DATA: from notification API / real-time socket
-  pageTitle?: string; // shown in top bar; also used to auto-select nav variant
-  showSearch?: boolean;
-  // Pass "home" for the user-facing sidebar, "dashboard" for the admin sidebar
-  variant?: "home" | "dashboard";
-}
 
 // ── Sidebar ────────────────────────────────────────────────────
 const Sidebar: React.FC<{
   nav: NavItem[];
+  expanded: boolean;
+  onToggle: () => void;
   onLogout: () => void;
-}> = ({ nav, onLogout }) => {
+  username: string;
+}> = ({ nav, expanded, onToggle, onLogout, username }) => {
   const pathname = usePathname();
+  const { navigate } = useNavigation();
 
   return (
-    // Sidebar: fixed, 240px wide (--sidebar-width in globals.css)
-    // To change width: update w-[240px] here AND --sidebar-width in globals.css
-    <aside className="fixed inset-y-0 left-0 z-30 flex flex-col w-[240px] bg-[#D72638]">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10 shrink-0">
-        <Logo
-          size="sm"
-          variant="full"
-          appName="DocuKnow"
-          // Override text color to white since sidebar is red
-          className="[&_span]:text-white"
-        />
+    <aside
+      style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
+      className={cn(
+        "fixed inset-y-0 left-0 z-30 flex flex-col bg-[#D72638]",
+        "transition-[width] duration-300 ease-in-out overflow-hidden",
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center h-16 px-3 shrink-0 border-b border-white/10 gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          className={cn(
+            "shrink-0 w-10 h-10 flex items-center justify-center rounded-xl",
+            "text-white/80 hover:bg-white/15 hover:text-white",
+            "transition-colors duration-150 [&>svg]:w-5 [&>svg]:h-5",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+          )}
+        >
+          <HamburgerIcon />
+        </button>
+        <div
+          className={cn(
+            "flex items-center gap-2 overflow-hidden transition-all duration-300",
+            expanded
+              ? "opacity-100 w-auto"
+              : "opacity-0 w-0 pointer-events-none",
+          )}
+        >
+          <LogoMark />
+          <span className="text-white font-bold text-base tracking-tight whitespace-nowrap">
+            DocuKnow
+          </span>
+        </div>
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+      {/* Nav — uses navigate() instead of <Link href> */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5">
         {nav.map((item) => {
-          // Exact match for home ("/"), prefix match for all others
+          // Resolve the route string from Navigation.ts to check active state
+          // "home" is exact-match; all others use startsWith on the resolved path
           const isActive =
-            item.href === "/"
+            item.action === "home"
               ? pathname === "/"
-              : pathname.startsWith(item.href);
+              : pathname.startsWith(
+                  // Strip query string for active check
+                  item.action === "dashboard"
+                    ? "/src/admin-page/dashboard"
+                    : item.action === "documents"
+                      ? "/documents"
+                      : item.action === "flowGuide"
+                        ? "/flow-guide"
+                        : item.action === "updates"
+                          ? "/updates"
+                          : item.action === "feedback"
+                            ? "/feedback"
+                            : item.action === "dashboardDocuments"
+                              ? "/src/admin-page/dashboard/documents"
+                              : item.action === "dashboardAccess"
+                                ? "/src/admin-page/dashboard/access"
+                                : item.action === "dashboardFeedback"
+                                  ? "/src/admin-page/dashboard/feedback"
+                                  : item.action === "dashboardUsers"
+                                    ? "/src/admin-page/dashboard/users"
+                                    : item.action === "dashboardReports"
+                                      ? "/src/admin-page/dashboard/reports"
+                                      : item.action === "dashboardSettings"
+                                        ? "/src/admin-page/dashboard/settings"
+                                        : "",
+                );
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
+            <button
+              key={item.action}
+              type="button"
+              title={!expanded ? item.label : undefined}
+              onClick={() => navigate(item.action)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
-                "transition-all duration-150",
-                "[&>span>svg]:w-5 [&>span>svg]:h-5",
+                "w-full flex items-center rounded-xl text-sm font-medium",
+                "transition-all duration-150 whitespace-nowrap",
+                "[&>span:first-child>svg]:w-5 [&>span:first-child>svg]:h-5",
+                expanded ? "gap-3 px-3 py-2.5" : "justify-center px-0 py-2.5",
                 isActive
-                  ? "bg-white text-[#D72638]" // active: white pill
-                  : "text-white/80 hover:bg-white/10 hover:text-white", // inactive
+                  ? "bg-white text-[#D72638]"
+                  : "text-white/80 hover:bg-white/15 hover:text-white",
               )}
             >
               <span className="shrink-0">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
+              <span
+                className={cn(
+                  "transition-all duration-300 overflow-hidden",
+                  expanded ? "opacity-100 max-w-[160px]" : "opacity-0 max-w-0",
+                )}
+              >
+                {item.label}
+              </span>
+            </button>
           );
         })}
       </nav>
 
-      {/* Logout button — pinned to bottom */}
-      <div className="shrink-0 px-3 pb-5 pt-2 border-t border-white/10">
-        <button
-          type="button"
-          onClick={onLogout}
+      {/* Bottom */}
+      <div className="shrink-0 px-2 pb-4 pt-2 border-t border-white/10">
+        {/* Collapsed: avatar */}
+        <div
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
-            "text-sm font-medium text-white/80",
-            "hover:bg-white/10 hover:text-white",
-            "transition-all duration-150",
-            "[&>span>svg]:w-5 [&>span>svg]:h-5",
-            "cursor-pointer",
+            "transition-all duration-300 overflow-hidden",
+            expanded
+              ? "opacity-0 max-h-0 pointer-events-none"
+              : "opacity-100 max-h-14",
           )}
         >
-          <span className="shrink-0">
-            <LogoutIcon />
-          </span>
-          <span>Logout</span>
-        </button>
+          <div className="flex justify-center py-1">
+            <Avatar name={username} size="sm" />
+          </div>
+        </div>
+        {/* Expanded: logout button */}
+        <div
+          className={cn(
+            "transition-all duration-300 overflow-hidden",
+            expanded
+              ? "opacity-100 max-h-14"
+              : "opacity-0 max-h-0 pointer-events-none",
+          )}
+        >
+          <button
+            type="button"
+            onClick={onLogout}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
+              "text-sm font-medium text-white/80 whitespace-nowrap",
+              "hover:bg-white/15 hover:text-white cursor-pointer",
+              "transition-colors duration-150",
+              "[&>span>svg]:w-5 [&>span>svg]:h-5",
+            )}
+          >
+            <span className="shrink-0">
+              <LogoutIcon />
+            </span>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -339,17 +451,11 @@ const Topbar: React.FC<{
   notifCount: number;
   showSearch: boolean;
 }> = ({ pageTitle, username, notifCount, showSearch }) => (
-  // Topbar: sticky, full-width minus sidebar, 64px tall (--navbar-height)
-  // Left margin (ml-[240px]) must match sidebar width
   <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-6 bg-white border-b border-gray-100">
-    {/* Left: page title */}
     <h1 className="text-lg font-bold text-gray-900 font-[family-name:var(--font-sans)]">
       {pageTitle}
     </h1>
-
-    {/* Right: search + notification + avatar */}
     <div className="flex items-center gap-3">
-      {/* Search bar — DATA: wire to your search API */}
       {showSearch && (
         <div className="relative hidden sm:flex items-center">
           <span className="absolute left-3 text-gray-400 [&>svg]:w-4 [&>svg]:h-4 pointer-events-none">
@@ -367,8 +473,6 @@ const Topbar: React.FC<{
           />
         </div>
       )}
-
-      {/* Notification bell — DATA: notifCount from notification API */}
       <div className="relative">
         <button
           type="button"
@@ -383,30 +487,37 @@ const Topbar: React.FC<{
         </button>
         <NotifBadge count={notifCount} />
       </div>
-
-      {/* Avatar — DATA: username for initials, wire src from user.avatarUrl */}
-      <Avatar
-        name={username}
-        size="sm"
-        // src={user.avatarUrl}  ← uncomment and wire when you have real auth
-      />
+      <Avatar name={username} size="sm" />
     </div>
   </header>
 );
 
-// ── AppShell (main export) ─────────────────────────────────────
+// ── AppShell props ─────────────────────────────────────────────
+export interface AppShellProps {
+  children: React.ReactNode;
+  username?: string;
+  notifCount?: number;
+  pageTitle?: string;
+  showSearch?: boolean;
+  variant?: "home" | "dashboard";
+  defaultExpanded?: boolean;
+}
+
+// ── AppShell ───────────────────────────────────────────────────
 export const AppShell: React.FC<AppShellProps> = ({
   children,
-  username = "Admin", // TODO: replace with auth context value
-  notifCount = 3, // TODO: replace with notification API value
+  username = "Admin",
+  notifCount = 3,
   pageTitle = "",
   showSearch = true,
   variant = "home",
+  defaultExpanded = true,
 }) => {
   const { navigate } = useNavigation();
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
-  // Choose sidebar nav based on variant
   const nav = variant === "dashboard" ? DASHBOARD_NAV : HOME_NAV;
+  const sidebarW = expanded ? EXPANDED_W : COLLAPSED_W;
 
   const handleLogout = () => {
     // TODO: call your real logout API here before navigating
@@ -415,18 +526,23 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50 font-[family-name:var(--font-sans)]">
-      {/* Fixed sidebar */}
-      <Sidebar nav={nav} onLogout={handleLogout} />
-
-      {/* Main area: offset by sidebar width */}
-      <div className="ml-[240px] flex flex-col min-h-screen">
+      <Sidebar
+        nav={nav}
+        expanded={expanded}
+        onToggle={() => setExpanded((v) => !v)}
+        onLogout={handleLogout}
+        username={username}
+      />
+      <div
+        style={{ marginLeft: sidebarW }}
+        className="flex flex-col min-h-screen transition-[margin-left] duration-300 ease-in-out"
+      >
         <Topbar
           pageTitle={pageTitle}
           username={username}
           notifCount={notifCount}
           showSearch={showSearch}
         />
-        {/* Page content */}
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>

@@ -73,7 +73,7 @@ export default function SignInPage() {
       // const res = await signIn({ username, password });
       // if (!res.ok) throw new Error(res.message);
       await new Promise((r) => setTimeout(r, 800)); // simulate network
-      router.push("/");
+      navigate("home");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Invalid username or password.";
@@ -85,7 +85,7 @@ export default function SignInPage() {
 
   // ── Continue as Admin (skips auth) ─────────────────────────
   const handleContinueAsAdmin = () => {
-    navigate("dashboard");
+    navigate("signUp");
   };
 
   return (
@@ -188,7 +188,7 @@ export default function SignInPage() {
             {/* Wire this up to your password reset route */}
             <div className="flex justify-end mb-6">
               <Link
-                href="/forgot-password"
+                href="/"
                 className="text-xs text-[#D72638] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30 rounded"
               >
                 Forgot password?
@@ -212,17 +212,6 @@ export default function SignInPage() {
               <span className="text-xs text-gray-400">or</span>
               <span className="flex-1 h-px bg-gray-200" />
             </div>
-
-            {/* Register button */}
-            {/* Navigates to your sign-up page */}
-            <Button
-              label="Register / Sign Up"
-              variant="outline"
-              size="lg"
-              fullWidth
-              onClick={() => navigate("signUp")}
-              className="mb-6"
-            />
 
             {/* Continue as Admin card */}
             {/* This card navigates directly to /dashboard — no auth check */}

@@ -4,15 +4,47 @@ import { useRouter } from "next/navigation";
 export type NavigationAction =
   | "signIn"
   | "signUp"
-  | "dashboard";
+  | "dashboard"
+  // ── Home sidebar routes ──────────────────────────────────────
+  | "home"
+  | "documents"
+  | "flowGuide"
+  | "updates"
+  | "feedback"
+  // ── Dashboard sidebar routes ─────────────────────────────────
+  | "dashboardDocuments"
+  | "dashboardAccess"
+  | "dashboardFeedback"
+  | "dashboardUsers"
+  | "dashboardReports"
+  | "dashboardSettings";
 
 const ROUTES: Record<NavigationAction, string> = {
-  signIn: "/src/auth/sign-in",
-  signUp: "/src/auth/sign-up",
-  dashboard: "/src/dashboard"
+  // ── Auth ────────────────────────────────────────────────────
+  signIn:               "/src/auth/sign-in",
+  signUp:               "/src/auth/sign-up",
+
+  // ── Home sidebar ────────────────────────────────────────────
+  home:                 "/src/homepage/home",
+  documents:            "/src/homepage/document",
+  flowGuide:            "/flow-guide",
+  updates:              "/updates",
+  feedback:             "/feedback",
+
+  // ── Dashboard sidebar ────────────────────────────────────────
+  dashboard:            "/src/admin-page/dashboard",
+  dashboardDocuments:   "/src/admin-page/dashboard/documents",
+  dashboardAccess:      "/src/admin-page/dashboard/access",
+  dashboardFeedback:    "/src/admin-page/dashboard/feedback",
+  dashboardUsers:       "/src/admin-page/dashboard/users",
+  dashboardReports:     "/src/admin-page/dashboard/reports",
+  dashboardSettings:    "/src/admin-page/dashboard/settings",
 };
 
-const REPLACE_ACTIONS = new Set<NavigationAction>([]);
+// Routes that use replace() instead of push() — no Back button
+const REPLACE_ACTIONS = new Set<NavigationAction>([
+  "signIn", // after logout, user shouldn't be able to go Back
+]);
 
 export function useNavigation() {
   const router = useRouter();
@@ -22,12 +54,9 @@ export function useNavigation() {
     params?: Record<string, string>,
   ) {
     const route = ROUTES[action];
-
-    // Convert params to query string
     const query = params
       ? `?${new URLSearchParams(params).toString()}`
       : "";
-
     const fullRoute = `${route}${query}`;
 
     if (REPLACE_ACTIONS.has(action)) {
