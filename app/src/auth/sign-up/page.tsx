@@ -1,3 +1,5 @@
+// Admin Log in
+
 "use client";
 
 import React, { useState } from "react";
@@ -6,46 +8,25 @@ import { Input, PasswordInput } from "@/app/components/ui/Input";
 import { Logo } from "@/app/components/ui/Misc";
 import { useNavigation } from "@/app/lib/Navigation";
 
-// ─────────────────────────────────────────────────────────────
-// AdminSignInPage
-//
-// Layout:
-//   Full red background with a centered white card
-//   Card contains: Logo, Email, Password, Forgot Password, Login button
-//
-// Behavior:
-//   • "Login" → on success, navigate to "dashboard"
-//   • "Forgot password?" → placeholder link (wire up as needed)
-//
-// DATA:
-//   Replace the simulate network call in handleLogin with your real API.
-// ─────────────────────────────────────────────────────────────
-
 export default function AdminSignInPage() {
   const { navigate } = useNavigation();
 
-  // ── Form state ───────────────────────────────────────────────
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{
-    email?: string;
+    username?: string;
     password?: string;
     form?: string;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── Validation ───────────────────────────────────────────────
   const validate = () => {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      next.email = "Please enter a valid email.";
+    if (!username.trim()) next.username = "Username is required.";
     if (!password) next.password = "Password is required.";
     return next;
   };
 
-  // ── Submit ───────────────────────────────────────────────────
-  // TODO: replace the simulated delay with your real auth API call.
   const handleLogin = async () => {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -55,62 +36,69 @@ export default function AdminSignInPage() {
 
     setErrors({});
     setIsLoading(true);
+
     try {
-      // e.g. await signIn({ email, password });
-      await new Promise((r) => setTimeout(r, 800)); // simulate network
-      navigate("dashboard");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Invalid username or password.');
+
+      if (data.user.role !== 'admin') {
+        throw new Error('You are not authorized as admin.');
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      navigate('dashboard');
     } catch (err: unknown) {
       setErrors({
-        form: err instanceof Error ? err.message : "Invalid email or password.",
+        form: err instanceof Error ? err.message : 'Invalid username or password.',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Allow submitting with Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleLogin();
   };
 
   return (
-    // Full-screen red background
     <div className="min-h-screen bg-[#D72638] flex flex-col items-center justify-center px-4 font-[family-name:var(--font-sans)]">
-      {/* ── White card ─────────────────────────────────────── */}
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-xl px-8 py-10">
-        {/* Logo — uses your Logo component from Misc.tsx */}
-        {/* variant="full" shows icon + "DocuKnow" text */}
-        {/* To change the app name: <Logo appName="YourAppName" /> */}
         <div className="flex justify-center mb-8">
           <Logo size="md" variant="full" />
         </div>
 
-        {/* Form-level error */}
         {errors.form && (
           <div className="mb-5 rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
             {errors.form}
           </div>
         )}
 
-        {/* Email field */}
         <div className="mb-4">
           <Input
-            label="Email"
-            type="email"
-            placeholder="Enter your Email"
-            value={email}
+            label="Username"
+            type="text"
+            placeholder="Enter your username"
+            value={username}
             onChange={(e) => {
-              setEmail(e.target.value);
-              if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+              setUsername(e.target.value);
+              if (errors.username) setErrors((p) => ({ ...p, username: undefined }));
             }}
             onKeyDown={handleKeyDown}
-            error={errors.email}
-            autoComplete="email"
+            error={errors.username}
+            autoComplete="username"
             autoFocus
           />
         </div>
 
-        {/* Password field */}
         <div className="mb-1">
           <PasswordInput
             label="Password"
@@ -118,8 +106,7 @@ export default function AdminSignInPage() {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              if (errors.password)
-                setErrors((p) => ({ ...p, password: undefined }));
+              if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
             }}
             onKeyDown={handleKeyDown}
             error={errors.password}
@@ -127,21 +114,16 @@ export default function AdminSignInPage() {
           />
         </div>
 
-        {/* Forgot password */}
-        {/* TODO: wire href to your password reset page/modal */}
         <div className="flex justify-end mb-6 mt-2">
           <button
             type="button"
-            onClick={() => {
-              /* TODO: navigate to forgot password */
-            }}
+            onClick={() => {}}
             className="text-sm text-[#D72638] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30 rounded"
           >
             Forgot password?
           </button>
         </div>
 
-        {/* Login button */}
         <Button
           label="Login"
           variant="primary"
@@ -152,7 +134,6 @@ export default function AdminSignInPage() {
         />
       </div>
 
-      {/* Footer — outside the card, bottom of screen */}
       <p className="mt-8 text-xs text-white/50">
         © {new Date().getFullYear()} Sample. All rights reserved.
       </p>
