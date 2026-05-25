@@ -1,5 +1,4 @@
 "use client";
-// 5
 import { useState } from "react";
 import axios from "axios";
 
@@ -169,80 +168,78 @@ export default function AdminFunctionPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 p-4">
+      <div className="flex flex-row gap-6 p-4">
 
-        {/* ACCOUNT ROW */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">Account</h3>
-          <div className="flex flex-row gap-4">
-            {/* Create Account Card */}
-            <div
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <line x1="19" y1="8" x2="19" y2="14" />
-                  <line x1="22" y1="11" x2="16" y2="11" />
-                </svg>
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">Create Account</h2>
-              <p className="text-sm text-gray-500">Add a new user account to the system.</p>
-            </div>
+        {/* ACCOUNT COLUMN */}
+        <div className="flex flex-col gap-4 flex-1">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">Account</h3>
 
-            {/* Manage Accounts Card */}
-            <div
-              onClick={() => { setIsManageModalOpen(true); fetchUsers(); }}
-              className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-                </svg>
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">Manage Accounts</h2>
-              <p className="text-sm text-gray-500">View, edit, or deactivate existing user accounts.</p>
+          {/* Create Account Card */}
+          <div
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
             </div>
+            <h2 className="text-base font-semibold text-gray-900">Create Account</h2>
+            <p className="text-sm text-gray-500">Add a new user account to the system.</p>
+          </div>
+
+          {/* Manage Accounts Card */}
+          <div
+            onClick={() => { setIsManageModalOpen(true); fetchUsers(); }}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">Manage Accounts</h2>
+            <p className="text-sm text-gray-500">View, edit, or deactivate existing user accounts.</p>
           </div>
         </div>
 
-        {/* DATA ROW */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">Data</h3>
-          <div className="flex flex-row gap-4">
-            {/* Add Data Card */}
-            <div
-              onClick={() => setIsAddDataModalOpen(true)}
-              className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">Add Data</h2>
-              <p className="text-sm text-gray-500">Create a new post with title, description, photo and content.</p>
-            </div>
+        {/* DATA COLUMN */}
+        <div className="flex flex-col gap-4 flex-1">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">Data</h3>
 
-            {/* Manage Posts Card */}
-            <div
-              onClick={() => { setIsManagePostsModalOpen(true); fetchPosts(); }}
-              className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M9 17H7A5 5 0 017 7h10a5 5 0 015 5" />
-                  <path d="M13 21l4-4-4-4" />
-                  <line x1="17" y1="17" x2="9" y2="17" />
-                </svg>
-              </div>
-              <h2 className="text-base font-semibold text-gray-900">Manage Posts</h2>
-              <p className="text-sm text-gray-500">View and delete existing posts.</p>
+          {/* Add Data Card */}
+          <div
+            onClick={() => setIsAddDataModalOpen(true)}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </div>
+            <h2 className="text-base font-semibold text-gray-900">Add Data</h2>
+            <p className="text-sm text-gray-500">Create a new post with title, description, photo and content.</p>
+          </div>
+
+          {/* Manage Posts Card */}
+          <div
+            onClick={() => { setIsManagePostsModalOpen(true); fetchPosts(); }}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M9 17H7A5 5 0 017 7h10a5 5 0 015 5" />
+                <path d="M13 21l4-4-4-4" />
+                <line x1="17" y1="17" x2="9" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">Manage Posts</h2>
+            <p className="text-sm text-gray-500">View and delete existing posts.</p>
           </div>
         </div>
 
