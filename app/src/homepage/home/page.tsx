@@ -1,37 +1,38 @@
 "use client";
 
-// app/src/home/page.tsx  (or wherever your Home route lives)
-// ─────────────────────────────────────────────────────────────
-// Home page — user-facing dashboard
-//
-// Sections:
-//   1. Documents stats row (Total, Processed, In Progress, Needs Review)
-//   2. Flow Guide cards (Standard Procedures + Workflow Diagrams)
-//   3. Feedback summary (count card + recent list placeholder)
-//
-// DATA: All placeholder values below marked with // DATA comments.
-//       Wire each to your real API calls when ready.
-// ─────────────────────────────────────────────────────────────
-
-import React from "react";
+import React, { useState } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
 import {
   Card,
   CardHeader,
   CardTitle,
-  StatsCard,
   InfoCard,
-  Button,
-} from "@/app/types";
+} from "@/app/components/ui/Card";
+import { Badge } from "@/app/components/ui/Badge";
+import { SearchBar } from "@/app/components/ui/SearchBar";
 import { cn } from "@/app/lib/utils";
+import { useNavigation } from "@/app/lib/Navigation";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
 
-// ── Icons ─────────────────────────────────────────────────────
-const DocIcon = () => (
+// ── Icons ──────────────────────────────────────────────────────
+const ChevronRightIcon = () => (
   <svg
+    className="w-4 h-4"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth={2}
+    strokeLinecap="round"
+  >
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+const ArticleIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
   >
@@ -41,43 +42,29 @@ const DocIcon = () => (
     <line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
-const ProcessIcon = () => (
+const EyeIcon = () => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <polyline points="20 6 9 17 4 12" />
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
-const ProgressIcon = () => (
+const HeartIcon = () => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-const ReviewIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
+    <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
   </svg>
 );
 const GuideIcon = () => (
@@ -110,7 +97,7 @@ const DiagramIcon = () => (
     <line x1="12" y1="12" x2="19" y2="17" />
   </svg>
 );
-const FeedbackIcon = () => (
+const UpdatesIcon = () => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -119,29 +106,95 @@ const FeedbackIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    <polyline points="23 4 23 10 17 10" />
+    <polyline points="1 20 1 14 7 14" />
+    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
   </svg>
 );
-const ChevronRightIcon = () => (
+const MegaphoneIcon = () => (
   <svg
-    className="w-4 h-4"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth={2}
     strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    <polyline points="9 18 15 12 9 6" />
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M15.54 8.46a5 5 0 010 7.07" />
+  </svg>
+);
+const CalendarIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
 
-// ── Section header with "View all" link ────────────────────────
+// ── Types ──────────────────────────────────────────────────────
+type UpdateTag = "System" | "Action Required" | "Maintenance";
+const TAG_VARIANT: Record<UpdateTag, "gray" | "warning" | "info"> = {
+  System: "gray",
+  "Action Required": "warning",
+  Maintenance: "info",
+};
+interface UpdateItem {
+  id: string;
+  title: string;
+  date: string;
+  tag: UpdateTag;
+  icon: React.ReactNode;
+}
+
+// ── Placeholder data ───────────────────────────────────────────
+const SAMPLE_UPDATES: UpdateItem[] = [
+  {
+    id: "1",
+    title: "DocuKnow Release New Update",
+    date: "May 20, 2026 • 10:30 AM",
+    tag: "System",
+    icon: <UpdatesIcon />,
+  },
+  {
+    id: "2",
+    title: "New Document Released",
+    date: "May 19, 2026 • 04:15 PM",
+    tag: "Action Required",
+    icon: <MegaphoneIcon />,
+  },
+  {
+    id: "3",
+    title: "Schedule Maintenance",
+    date: "May 18, 2026 • 11:20 AM",
+    tag: "Maintenance",
+    icon: <CalendarIcon />,
+  },
+];
+
+// ── Section header ─────────────────────────────────────────────
 const SectionHeader: React.FC<{
   title: string;
   viewAllHref?: string;
-}> = ({ title, viewAllHref = "#" }) => (
+  badge?: number;
+}> = ({ title, viewAllHref = "#", badge }) => (
   <CardHeader>
-    <CardTitle>{title}</CardTitle>
+    <div className="flex items-center gap-2">
+      <CardTitle>{title}</CardTitle>
+      {badge !== undefined && badge > 0 && (
+        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[#D72638] text-white text-[10px] font-bold leading-none">
+          {badge} New
+        </span>
+      )}
+    </div>
     <a
       href={viewAllHref}
       className="flex items-center gap-0.5 text-xs font-medium text-[#D72638] hover:underline focus:outline-none"
@@ -151,173 +204,202 @@ const SectionHeader: React.FC<{
   </CardHeader>
 );
 
+// ── Feature card ───────────────────────────────────────────────
+const FeatureCard: React.FC<{
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}> = ({ title, subtitle, icon, onClick = () => {} }) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "flex-1 min-w-0 rounded-xl border border-gray-200 bg-white p-5",
+      "flex flex-col gap-4 text-left",
+      "hover:border-[#D72638]/40 hover:shadow-md",
+      "transition-all duration-200 group focus:outline-none",
+      "focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+    )}
+  >
+    <div className="w-12 h-12 rounded-xl bg-[#FEF0F1] flex items-center justify-center text-[#D72638] [&>svg]:w-7 [&>svg]:h-7 group-hover:bg-[#D72638] group-hover:text-white transition-colors duration-200">
+      {icon}
+    </div>
+    <div>
+      <p className="text-lg font-bold text-[#D72638] group-hover:text-[#B01E2C] transition-colors duration-150">
+        {title}
+      </p>
+      <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+    </div>
+  </button>
+);
+
+// ── Update row ─────────────────────────────────────────────────
+const UpdateRow: React.FC<{ item: UpdateItem }> = ({ item }) => (
+  <div className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
+    <div className="w-8 h-8 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] shrink-0 [&>svg]:w-4 [&>svg]:h-4">
+      {item.icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-gray-900 truncate">
+        {item.title}
+      </p>
+      <p className="text-xs text-gray-400 mt-0.5">{item.date}</p>
+    </div>
+    <Badge label={item.tag} variant={TAG_VARIANT[item.tag]} size="sm" />
+  </div>
+);
+
 // ── HOME PAGE ──────────────────────────────────────────────────
 export default function HomePage() {
-  // ── DATA: replace all static values below with real API data ──
-  // e.g. const { data } = useHomeStats();
   const username = "Urdanetz"; // DATA: auth context → user.name
   const notifCount = 3; // DATA: notification API → unread count
+  const newUpdates = 4; // DATA: updates API → new/unread count
 
-  const docStats = {
-    total: 200, // DATA: documents API → total count
-    processed: 100, // DATA: documents API → processed count
-    inProgress: 20, // DATA: documents API → in-progress count
-    needsReview: 14, // DATA: documents API → needs-review count
+  // ── Search state ─────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { navigate } = useNavigation();
+
+  // ── Fix 1: was `fetchResults` (undefined) — now a proper handler ──
+  // TODO: replace the console.log with your real search API call
+  // e.g. const results = await searchDocuments(value);
+  const handleSearch = (value: string) => {
+    console.log("Search:", value);
+    // TODO: call your search API here, e.g.:
+    // router.push(`/search?q=${encodeURIComponent(value)}`);
   };
 
-  const feedbackTotal = 32; // DATA: feedback API → total count
-
   return (
-    <AppShell
-      variant="home"
-      pageTitle={`Welcome back, ${username}`}
-      username={username}
-      notifCount={notifCount}
-      showSearch
-    >
-      <div className="space-y-6 max-w-5xl">
-        {/* ── 1. Documents section ────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader title="Documents" viewAllHref="/documents" />
+    <ProtectedRoute requiredRole="admin">
+      <AppShell
+        variant="home"
+        pageTitle={`Welcome back, ${username}`}
+        username={username}
+        notifCount={notifCount}
+        showSearch={false}
+      >
+        {/*
+        Fix 2: Responsive layout
+        - Removed max-w-4xl so the content fills the full available width
+        - Used w-full so every section stretches edge-to-edge
+        - AppShell's <main> already has p-6, so no extra padding needed here
+      */}
+        <div className="w-full space-y-5">
+          {/* Search bar — full width on mobile, capped on desktop */}
+          {/* Fix 1: removed fetchResults — now calls handleSearch */}
+          <SearchBar
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onSearch={handleSearch}
+            onClear={() => setSearchQuery("")}
+            placeholder="Search article, document..."
+            fullWidth
+            size="md"
+          />
 
-          {/* Stats grid — 4 columns on lg, 2 on sm */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="Total Documents"
-              value={docStats.total} // DATA
-              description="All uploaded documents"
-              icon={<DocIcon />}
-              iconBg="bg-[#FEF0F1]"
-              iconColor="text-[#D72638]"
+          {/* ── 1. Feature cards ──────────────────────────────── */}
+          {/* flex-col on mobile → flex-row on sm+ */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <FeatureCard
+              title="New Article"
+              subtitle="12 New This Week" // DATA: articles API → new this week
+              icon={<ArticleIcon />}
+              onClick={() => navigate("documents")}
             />
-            <StatsCard
-              title="Processed"
-              value={docStats.processed} // DATA
-              description="Successfully processed"
-              icon={<ProcessIcon />}
-              iconBg="bg-[#FEF0F1]"
-              iconColor="text-[#D72638]"
+            <FeatureCard
+              title="Most Viewed"
+              subtitle="Top 10 This Month" // DATA: analytics API → top viewed
+              icon={<EyeIcon />}
+              onClick={() => navigate("documents")}
             />
-            <StatsCard
-              title="In Progress"
-              value={docStats.inProgress} // DATA
-              description="Currently processing"
-              icon={<ProgressIcon />}
-              iconBg="bg-[#FEF0F1]"
-              iconColor="text-[#D72638]"
-            />
-            <StatsCard
-              title="Needs Review"
-              value={docStats.needsReview} // DATA
-              description="Require your attention"
-              icon={<ReviewIcon />}
-              iconBg="bg-amber-50"
-              iconColor="text-amber-600"
-            />
-          </div>
-        </Card>
-
-        {/* ── 2. Flow Guide section ────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader title="Flow Guide" viewAllHref="/flow-guide" />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Standard Procedures card */}
-            <InfoCard
-              title="Standard Procedures"
-              description="Step-by-step guidelines for document processing and management."
-              icon={<GuideIcon />}
-              iconBg="bg-[#FEF0F1]"
-              iconColor="text-[#D72638]"
-              action={{
-                label: "Open Guide",
-                // TODO: wire to your actual guide page or modal
-                onClick: () => {
-                  window.location.href = "/flow-guide/standard";
-                },
-              }}
-            />
-
-            {/* Workflow Diagrams card */}
-            <InfoCard
-              title="Workflow Diagrams"
-              description="Visual workflows for scanning, processing and approval process."
-              icon={<DiagramIcon />}
-              iconBg="bg-[#FEF0F1]"
-              iconColor="text-[#D72638]"
-              action={{
-                label: "View Diagrams",
-                // TODO: wire to your actual diagrams page or modal
-                onClick: () => {
-                  window.location.href = "/flow-guide/diagrams";
-                },
-              }}
+            <FeatureCard
+              title="Saved"
+              subtitle="8 Saved Articles" // DATA: saved API → saved count
+              icon={<HeartIcon />}
+              onClick={() => navigate("documents")}
             />
           </div>
-        </Card>
 
-        {/* ── 3. Feedback section ──────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader title="Feedback" viewAllHref="/feedback" />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Feedback summary card (left) */}
-            <Card
-              variant="flat"
-              padding="md"
-              className="flex flex-col items-center justify-center text-center gap-3"
-            >
-              <div className="w-14 h-14 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] [&>svg]:w-7 [&>svg]:h-7">
-                <FeedbackIcon />
-              </div>
-              {/* DATA: feedbackTotal from feedback API */}
-              <p className="text-3xl font-bold text-[#D72638]">
-                {feedbackTotal}
-              </p>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Total Feedback
-                </p>
-                <p className="text-xs text-gray-400">
-                  From users and reviewers
-                </p>
-              </div>
-              <Button
-                label="View Feedback"
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  window.location.href = "/feedback";
+          {/* ── 2. Flow Guide ─────────────────────────────────── */}
+          <Card variant="default" padding="md">
+            <SectionHeader title="Flow Guide" viewAllHref="/flow-guide" />
+            {/* 1 col on mobile, 2 col on md+ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InfoCard
+                title="Standard Procedures"
+                description="Step-by-step guidelines for document processing and management."
+                icon={<GuideIcon />}
+                iconBg="bg-[#FEF0F1]"
+                iconColor="text-[#D72638]"
+                action={{
+                  label: "Open Guide",
+                  onClick: () => {
+                    window.location.href = "/flow-guide/standard";
+                  },
                 }}
               />
-            </Card>
+              <InfoCard
+                title="Workflow Diagrams"
+                description="Visual workflows for scanning, processing and approval process."
+                icon={<DiagramIcon />}
+                iconBg="bg-[#FEF0F1]"
+                iconColor="text-[#D72638]"
+                action={{
+                  label: "View Diagrams",
+                  onClick: () => {
+                    window.location.href = "/flow-guide/diagrams";
+                  },
+                }}
+              />
+            </div>
+          </Card>
 
-            {/* Recent Feedback placeholder (right — 2 cols) */}
-            {/* DATA: replace this with real feedback items from your API */}
-            <div className="md:col-span-2 flex flex-col">
-              <p className="text-sm font-semibold text-gray-700 mb-3">
-                Recent Feedback
-              </p>
-              {/* Replace this empty state with a mapped list of feedback items */}
-              <div className="flex-1 flex items-center justify-center rounded-xl border border-dashed border-gray-200 py-10">
-                <p className="text-sm text-gray-400">
-                  {/* DATA: map real feedback rows here */}
-                  No recent feedback to display.
-                </p>
+          {/* ── 3. Updates ────────────────────────────────────── */}
+          <Card variant="default" padding="md">
+            <SectionHeader
+              title="Updates"
+              viewAllHref="/updates"
+              badge={newUpdates}
+            />
+
+            {/* Stack on mobile, side-by-side on md+ */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Left: graphic card — full width on mobile, fixed on md+ */}
+              <div
+                className={cn(
+                  "flex flex-col items-center justify-center gap-3",
+                  "rounded-xl border border-gray-100 bg-gray-50 p-6",
+                  "w-full md:w-48 shrink-0",
+                )}
+              >
+                <div className="w-14 h-14 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] [&>svg]:w-8 [&>svg]:h-8">
+                  <UpdatesIcon />
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-bold text-gray-800">Updates</p>
+                  {newUpdates > 0 && (
+                    <span className="inline-flex items-center justify-center mt-1 px-2.5 py-0.5 rounded-full bg-[#D72638] text-white text-xs font-bold">
+                      {newUpdates} New
+                    </span>
+                  )}
+                </div>
               </div>
-              {/* "Go to Feedback" footer link */}
-              <div className="mt-3 flex justify-center">
-                <a
-                  href="/feedback"
-                  className="flex items-center gap-1 text-sm text-[#D72638] hover:underline font-medium focus:outline-none"
-                >
-                  Go to Feedback <ChevronRightIcon />
-                </a>
+
+              {/* Right: update rows — grows to fill remaining space */}
+              <div className="flex-1 min-w-0 divide-y divide-gray-50">
+                {SAMPLE_UPDATES.map((item) => (
+                  <UpdateRow key={item.id} item={item} />
+                ))}
+                {SAMPLE_UPDATES.length === 0 && (
+                  <div className="flex items-center justify-center py-10">
+                    <p className="text-sm text-gray-400">No updates yet.</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </Card>
-      </div>
-    </AppShell>
+          </Card>
+        </div>
+      </AppShell>
+    </ProtectedRoute>
   );
 }

@@ -1,38 +1,101 @@
 "use client";
 
-// app/documents/page.tsx
-// ─────────────────────────────────────────────────────────────
-// Documents page — user-facing
-//
-// Layout:
-//   AppShell (home sidebar) wraps the content
-//   Two tab buttons: Medical Records | Prescriptions
-//   Scrollable list of document cards (icon + title + date)
-//
-// DATA:
-//   Every value marked // DATA — replace with your real API calls.
-//   Active tab filters which document list is shown.
-// ─────────────────────────────────────────────────────────────
+// app/documents/page.tsx  (updated — uses reusable DocumentModal)
+// Replace the old inline DocumentDetailModal with the shared component.
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
-import { Card } from "@/app/components/ui/Card";
+import { Button } from "@/app/components/ui/Button";
+import Modal from "@/app/components/ui/Modal";
 import { cn } from "@/app/lib/utils";
 
-// ── Types ──────────────────────────────────────────────────────
-type DocumentTab = "medical-records" | "prescriptions";
+// ══════════════════════════════════════════════════════════════
+// TYPES
+// ══════════════════════════════════════════════════════════════
+type FilterCategory = "Prescription" | "New Article" | "Saved";
 
 interface DocumentItem {
   id: string;
-  title: string; // DATA: document.title from API
-  date: string; // DATA: document.createdAt formatted
-  category: DocumentTab;
+  title: string;
+  date: string;
+  category: "medical-records" | "prescriptions";
+  body?: string;
+  images?: string[];
+  tags?: FilterCategory[];
 }
 
-// ── Document icon ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// PLACEHOLDER DATA — replace with real API calls
+// ══════════════════════════════════════════════════════════════
+const SAMPLE_DOCUMENTS: DocumentItem[] = [
+  {
+    id: "1",
+    title: "Suggestion to add more categories in Flow Guide.",
+    date: "May 20, 2026 • 10:30 AM",
+    category: "medical-records",
+    tags: ["New Article"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem",
+    images: [],
+  },
+  {
+    id: "2",
+    title: "Document OCR accuracy can be improved.",
+    date: "May 19, 2026 • 04:15 PM",
+    category: "medical-records",
+    tags: ["New Article", "Saved"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
+    images: [],
+  },
+  {
+    id: "3",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    tags: ["Prescription"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
+    images: [],
+  },
+  {
+    id: "4",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    tags: ["Saved"],
+    body: "Lorem ipsum dolor sit amet.",
+  },
+  {
+    id: "5",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    body: "Lorem ipsum dolor sit amet.",
+  },
+  {
+    id: "11",
+    title: "Prescription — Amoxicillin 500mg.",
+    date: "May 20, 2026 • 09:00 AM",
+    category: "prescriptions",
+    tags: ["Prescription"],
+    body: "Prescription details for Amoxicillin 500mg.",
+  },
+  {
+    id: "12",
+    title: "Prescription — Metformin 1000mg.",
+    date: "May 17, 2026 • 02:30 PM",
+    category: "prescriptions",
+    tags: ["Prescription", "Saved"],
+    body: "Prescription details for Metformin 1000mg.",
+  },
+];
+
+const ALL_FILTERS: FilterCategory[] = ["Prescription", "New Article", "Saved"];
+
+// ══════════════════════════════════════════════════════════════
+// ICONS
+// ══════════════════════════════════════════════════════════════
 const DocFileIcon = () => (
   <svg
-    className="w-6 h-6 shrink-0"
+    className="w-5 h-5 shrink-0"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -44,175 +107,187 @@ const DocFileIcon = () => (
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
     <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+const SearchIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+const FilterIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="21" y1="6" x2="3" y2="6" />
+    <line x1="15" y1="12" x2="9" y2="12" />
+    <line x1="11" y1="18" x2="13" y2="18" />
+  </svg>
+);
+const ChevronDownIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+  >
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
-// ── PLACEHOLDER DATA — replace with your real API response ─────
-// Structure: fetch documents filtered by the active tab/category.
-// e.g. const { data } = useDocuments({ category: activeTab });
-const SAMPLE_DOCUMENTS: DocumentItem[] = [
-  {
-    id: "1",
-    title: "Suggestion to add more categories in Flow Guide.",
-    date: "May 20, 2026 • 10:30 AM",
-    category: "medical-records",
-  },
-  {
-    id: "2",
-    title: "Document OCR accuracy can be improved.",
-    date: "May 19, 2026 • 04:15 PM",
-    category: "medical-records",
-  },
-  {
-    id: "3",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "4",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "5",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "6",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "7",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "8",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "9",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  {
-    id: "10",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-  },
-  // ── Prescriptions tab data ─────────────────────────────────
-  {
-    id: "11",
-    title: "Prescription — Amoxicillin 500mg.",
-    date: "May 20, 2026 • 09:00 AM",
-    category: "prescriptions",
-  },
-  {
-    id: "12",
-    title: "Prescription — Metformin 1000mg.",
-    date: "May 17, 2026 • 02:30 PM",
-    category: "prescriptions",
-  },
-  {
-    id: "13",
-    title: "Prescription — Lisinopril 10mg.",
-    date: "May 15, 2026 • 11:00 AM",
-    category: "prescriptions",
-  },
-];
+// ══════════════════════════════════════════════════════════════
+// FILTER DROPDOWN
+// ══════════════════════════════════════════════════════════════
+const FilterDropdown: React.FC<{
+  selected: Set<FilterCategory>;
+  onChange: (cat: FilterCategory) => void;
+  onClose: () => void;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+}> = ({ selected, onChange, onClose, anchorRef }) => {
+  const ref = useRef<HTMLDivElement>(null);
 
-// ── Tab button ─────────────────────────────────────────────────
-// active  → filled red background, white text
-// inactive → transparent background, gray text, red border
-const TabButton: React.FC<{
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}> = ({ label, active, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cn(
-      // Base
-      "flex-1 py-2.5 px-6 rounded-lg text-sm font-semibold",
-      "transition-all duration-200 focus:outline-none",
-      "focus-visible:ring-2 focus-visible:ring-[#D72638]/40",
-      // Active state — filled red
-      active
-        ? "bg-[#D72638] text-white shadow-sm"
-        : "bg-transparent text-gray-500 hover:text-[#D72638]",
-    )}
-  >
-    {label}
-  </button>
-);
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      )
+        onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose, anchorRef]);
 
-// ── Document card row ──────────────────────────────────────────
-// Each document is a bordered card with an icon, title, and date.
-// onClick: wire to open document details / modal when ready.
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-lg border border-gray-100 font-[family-name:var(--font-sans)] p-3"
+    >
+      <p className="text-sm font-semibold text-gray-900 mb-3 px-1">Filter</p>
+      <div className="space-y-1">
+        {ALL_FILTERS.map((cat) => {
+          const checked = selected.has(cat);
+          return (
+            <label
+              key={cat}
+              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-150"
+            >
+              <span
+                onClick={() => onChange(cat)}
+                className={cn(
+                  "w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors",
+                  checked
+                    ? "bg-[#D72638] border-[#D72638]"
+                    : "border-gray-300 bg-white",
+                )}
+              >
+                {checked && (
+                  <svg
+                    className="w-3 h-3 text-white"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  >
+                    <polyline points="2 6 5 9 10 3" />
+                  </svg>
+                )}
+              </span>
+              <span className="text-sm text-gray-700">{cat}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// DOCUMENT CARD ROW
+// ══════════════════════════════════════════════════════════════
 const DocumentCard: React.FC<{
   item: DocumentItem;
-  onClick: (id: string) => void;
+  onClick: (item: DocumentItem) => void;
 }> = ({ item, onClick }) => (
-  <Card
-    variant="bordered"
-    padding="sm"
-    onClick={() => onClick(item.id)}
+  <button
+    type="button"
+    onClick={() => onClick(item)}
     className={cn(
-      "flex items-center gap-3 px-4 py-3",
-      "border border-gray-200 hover:border-[#D72638]/40",
-      "cursor-pointer group transition-all duration-150",
+      "w-full flex items-center gap-3 px-4 py-3 text-left",
+      "rounded-xl border border-gray-200 bg-white",
+      "hover:border-[#D72638]/50 hover:shadow-sm",
+      "transition-all duration-150 group focus:outline-none",
+      "focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
     )}
   >
-    {/* Document icon */}
-    <div className="text-[#D72638] [&>svg]:w-6 [&>svg]:h-6 shrink-0">
+    <div className="text-[#D72638] shrink-0">
       <DocFileIcon />
     </div>
-
-    {/* Text content */}
     <div className="flex-1 min-w-0">
-      {/* DATA: document.title */}
       <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#D72638] transition-colors duration-150">
         {item.title}
       </p>
-      {/* DATA: document.createdAt */}
       <p className="text-xs text-gray-400 mt-0.5">{item.date}</p>
     </div>
-  </Card>
+  </button>
 );
 
-// ── DOCUMENTS PAGE ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// DOCUMENTS PAGE
+// ══════════════════════════════════════════════════════════════
 export default function DocumentsPage() {
-  // DATA: replace with auth context
-  const username = "Urdanetz"; // DATA: auth context → user.name
-  const notifCount = 3; // DATA: notification API → unread count
+  const username = "Urdanetz";
+  const notifCount = 3;
 
-  // Active tab state
-  // When you wire up the API, pass activeTab as a filter param to your fetch.
-  const [activeTab, setActiveTab] = useState<DocumentTab>("medical-records");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilters, setActiveFilters] = useState<Set<FilterCategory>>(
+    new Set(),
+  );
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
 
-  // Filter documents by active tab
-  // DATA: replace this filter with a real API call scoped to activeTab
-  const visibleDocs = SAMPLE_DOCUMENTS.filter((d) => d.category === activeTab);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
 
-  // ── Document click handler ─────────────────────────────────
-  // TODO: navigate to document detail page or open a modal
-  const handleDocumentClick = (id: string) => {
-    console.log("Open document:", id);
-    // e.g. navigate("documentDetail", { id })
+  const toggleFilter = (cat: FilterCategory) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
+      return next;
+    });
   };
+
+  const handleSearch = () => {
+    console.log("Search:", searchQuery, "Filters:", [...activeFilters]);
+  };
+
+  const visibleDocs = SAMPLE_DOCUMENTS.filter((doc) => {
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      doc.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      activeFilters.size === 0 ||
+      (doc.tags ?? []).some((t) => activeFilters.has(t));
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <AppShell
@@ -220,68 +295,152 @@ export default function DocumentsPage() {
       pageTitle="Documents"
       username={username}
       notifCount={notifCount}
-      showSearch
+      showSearch={false}
     >
-      {/* ── Tab switcher ───────────────────────────────────── */}
-      {/* Centered pill container with a subtle border */}
-      <div className="flex justify-center mb-6">
-        <div
-          className={cn(
-            "inline-flex items-center gap-1 p-1 rounded-xl",
-            "border border-gray-200 bg-white shadow-sm",
-            "w-full max-w-sm",
+      <div className="w-full space-y-4">
+        {/* ── Search bar + Filter ──────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <SearchIcon />
+            </span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search article, document..."
+              className={cn(
+                "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
+                "text-sm text-gray-900 placeholder-gray-400",
+                "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]",
+                "transition-all duration-200 [&::-webkit-search-cancel-button]:hidden",
+              )}
+            />
+          </div>
+
+          <Button
+            label="Search"
+            variant="primary"
+            size="md"
+            leftIcon={<SearchIcon />}
+            onClick={handleSearch}
+            className="shrink-0"
+          />
+
+          <div className="relative shrink-0">
+            <button
+              ref={filterBtnRef}
+              type="button"
+              onClick={() => setFilterOpen((v) => !v)}
+              aria-label="Filter documents"
+              className={cn(
+                "h-10 px-3 flex items-center gap-1.5 rounded-xl border",
+                "text-sm font-medium transition-all duration-150",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+                filterOpen || activeFilters.size > 0
+                  ? "border-[#D72638] text-[#D72638] bg-[#FEF0F1]"
+                  : "border-gray-200 text-gray-500 bg-white hover:border-gray-300",
+              )}
+            >
+              <FilterIcon />
+              <ChevronDownIcon />
+              {activeFilters.size > 0 && (
+                <span className="w-4 h-4 flex items-center justify-center rounded-full bg-[#D72638] text-white text-[10px] font-bold">
+                  {activeFilters.size}
+                </span>
+              )}
+            </button>
+
+            {filterOpen && (
+              <FilterDropdown
+                selected={activeFilters}
+                onChange={toggleFilter}
+                onClose={() => setFilterOpen(false)}
+                anchorRef={filterBtnRef}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* ── Active filter chips ──────────────────────────── */}
+        {activeFilters.size > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {[...activeFilters].map((cat) => (
+              <span
+                key={cat}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF0F1] text-[#D72638] text-xs font-medium"
+              >
+                {cat}
+                <button
+                  type="button"
+                  onClick={() => toggleFilter(cat)}
+                  className="hover:text-[#B01E2C] focus:outline-none"
+                  aria-label={`Remove ${cat} filter`}
+                >
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  >
+                    <line x1="9" y1="3" x2="3" y2="9" />
+                    <line x1="3" y1="3" x2="9" y2="9" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => setActiveFilters(new Set())}
+              className="text-xs text-gray-400 hover:text-gray-600 underline focus:outline-none"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* ── Document list ────────────────────────────────── */}
+        <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
+          {visibleDocs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
+                <DocFileIcon />
+              </div>
+              <p className="text-sm font-semibold text-gray-700">
+                No documents found
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {searchQuery
+                  ? `No results for "${searchQuery}"`
+                  : "Try adjusting your filters."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleDocs.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  item={doc}
+                  onClick={setSelectedDoc}
+                />
+              ))}
+            </div>
           )}
-        >
-          <TabButton
-            label="Medical Records"
-            active={activeTab === "medical-records"}
-            onClick={() => setActiveTab("medical-records")}
-          />
-          <TabButton
-            label="Prescriptions"
-            active={activeTab === "prescriptions"}
-            onClick={() => setActiveTab("prescriptions")}
-          />
         </div>
       </div>
 
-      {/* ── Document list ──────────────────────────────────── */}
-      {/* Outer bordered container matching the image */}
-      <div
-        className={cn(
-          "rounded-2xl border border-gray-200 bg-white p-4",
-          "max-w-3xl mx-auto",
-        )}
-      >
-        {visibleDocs.length === 0 ? (
-          // Empty state — shown when no documents exist for the active tab
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
-              <DocFileIcon />
-            </div>
-            <p className="text-sm font-semibold text-gray-700">
-              No documents found
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {activeTab === "medical-records"
-                ? "No medical records available yet."
-                : "No prescriptions available yet."}
-            </p>
-          </div>
-        ) : (
-          // Document rows
-          // DATA: replace visibleDocs with real API data
-          <div className="space-y-2">
-            {visibleDocs.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                item={doc}
-                onClick={handleDocumentClick}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── Reusable Document Detail Modal ──────────────────── */}
+      <Modal
+        isOpen={!!selectedDoc}
+        onClose={() => setSelectedDoc(null)}
+        title={selectedDoc?.title ?? ""}
+        body={selectedDoc?.body}
+        date={selectedDoc?.date}
+        images={selectedDoc?.images}
+      />
     </AppShell>
   );
 }
