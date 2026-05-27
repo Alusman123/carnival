@@ -19,6 +19,8 @@ interface Post {
   photo: string;
   content: string;
   createdAt: string;
+  isHidden: boolean;
+  hiddenFrom: string[];
 }
 
 export default function AdminFunctionPage() {
@@ -47,6 +49,15 @@ export default function AdminFunctionPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
 
+  // Edit post state
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editMessage, setEditMessage] = useState("");
+  const [editError, setEditError] = useState("");
+
+  // Hide from user state
+  const [hideFromPost, setHideFromPost] = useState<Post | null>(null);
+
   const getToken = () => localStorage.getItem("token");
 
   const fetchUsers = async () => {
@@ -66,7 +77,9 @@ export default function AdminFunctionPage() {
   const fetchPosts = async () => {
     setPostsLoading(true);
     try {
-      const res = await axios.get(`${API}/api/posts`);
+      const res = await axios.get(`${API}/api/posts/admin/all`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       setPosts(res.data.posts);
     } catch (err: any) {
       console.error(err);
@@ -137,6 +150,68 @@ export default function AdminFunctionPage() {
     }
   };
 
+  const handleEditPost = async () => {
+    if (!editingPost) return;
+    setEditMessage("");
+    setEditError("");
+    setEditLoading(true);
+    try {
+      const res = await axios.put(
+        `${API}/api/posts/${editingPost._id}`,
+        {
+          title: editingPost.title,
+          description: editingPost.description,
+          photo: editingPost.photo,
+          content: editingPost.content,
+        },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      setEditMessage("✅ Post updated successfully!");
+      setPosts((prev) =>
+        prev.map((p) => (p._id === editingPost._id ? res.data.post : p))
+      );
+    } catch (err: any) {
+      setEditError(err.response?.data?.error || "Failed to update post.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleToggleHide = async (id: string) => {
+    try {
+      const res = await axios.patch(
+        `${API}/api/posts/${id}/toggle-hide`,
+        {},
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      setPosts((prev) =>
+        prev.map((p) => (p._id === id ? { ...p, isHidden: res.data.isHidden } : p))
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleHideFromUser = async (postId: string, userId: string, hide: boolean) => {
+    try {
+      const res = await axios.patch(
+        `${API}/api/posts/${postId}/hide-from-user`,
+        { userId, hide },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId ? { ...p, hiddenFrom: res.data.hiddenFrom } : p
+        )
+      );
+      setHideFromPost((prev) =>
+        prev ? { ...prev, hiddenFrom: res.data.hiddenFrom } : null
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleToggle = async (id: string) => {
     try {
       const res = await axios.patch(
@@ -174,11 +249,8 @@ export default function AdminFunctionPage() {
         <div className="flex flex-col gap-4 flex-1">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">Account</h3>
 
-          {/* Create Account Card */}
-          <div
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-          >
+          <div onClick={() => setIsCreateModalOpen(true)}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
               <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
@@ -191,11 +263,8 @@ export default function AdminFunctionPage() {
             <p className="text-sm text-gray-500">Add a new user account to the system.</p>
           </div>
 
-          {/* Manage Accounts Card */}
-          <div
-            onClick={() => { setIsManageModalOpen(true); fetchUsers(); }}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-          >
+          <div onClick={() => { setIsManageModalOpen(true); fetchUsers(); }}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
               <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -212,11 +281,8 @@ export default function AdminFunctionPage() {
         <div className="flex flex-col gap-4 flex-1">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">Data</h3>
 
-          {/* Add Data Card */}
-          <div
-            onClick={() => setIsAddDataModalOpen(true)}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-          >
+          <div onClick={() => setIsAddDataModalOpen(true)}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
               <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M12 5v14M5 12h14" />
@@ -226,11 +292,8 @@ export default function AdminFunctionPage() {
             <p className="text-sm text-gray-500">Create a new post with title, description, photo and content.</p>
           </div>
 
-          {/* Manage Posts Card */}
-          <div
-            onClick={() => { setIsManagePostsModalOpen(true); fetchPosts(); }}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-          >
+          <div onClick={() => { setIsManagePostsModalOpen(true); fetchPosts(); fetchUsers(); }}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-[#D72638]/10 rounded-lg flex items-center justify-center mb-2">
               <svg viewBox="0 0 24 24" fill="none" stroke="#D72638" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M9 17H7A5 5 0 017 7h10a5 5 0 015 5" />
@@ -239,7 +302,7 @@ export default function AdminFunctionPage() {
               </svg>
             </div>
             <h2 className="text-base font-semibold text-gray-900">Manage Posts</h2>
-            <p className="text-sm text-gray-500">View and delete existing posts.</p>
+            <p className="text-sm text-gray-500">View, edit, hide and delete existing posts.</p>
           </div>
         </div>
 
@@ -380,10 +443,10 @@ export default function AdminFunctionPage() {
       {/* Manage Posts Modal */}
       {isManagePostsModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Manage Posts</h2>
-              <button onClick={() => setIsManagePostsModalOpen(false)}
+              <button onClick={() => { setIsManagePostsModalOpen(false); setEditingPost(null); }}
                 className="text-gray-400 hover:text-gray-600 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -400,7 +463,7 @@ export default function AdminFunctionPage() {
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-200">
                       <th className="pb-3">Title</th>
-                      <th className="pb-3">Description</th>
+                      <th className="pb-3">Status</th>
                       <th className="pb-3">Created</th>
                       <th className="pb-3">Actions</th>
                     </tr>
@@ -408,19 +471,121 @@ export default function AdminFunctionPage() {
                   <tbody>
                     {posts.map((post) => (
                       <tr key={post._id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 font-medium text-gray-900">{post.title}</td>
-                        <td className="py-3 text-gray-500 max-w-[200px] truncate">{post.description}</td>
+                        <td className="py-3 font-medium text-gray-900 max-w-[150px] truncate">{post.title}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${post.isHidden ? "bg-gray-100 text-gray-500" : "bg-green-100 text-green-600"}`}>
+                            {post.isHidden ? "Hidden" : "Visible"}
+                          </span>
+                        </td>
                         <td className="py-3 text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</td>
                         <td className="py-3">
-                          <button onClick={() => handleDeletePost(post._id)}
-                            className="px-3 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer">
-                            Delete
-                          </button>
+                          <div className="flex gap-2 flex-wrap">
+                            <button onClick={() => setEditingPost(post)}
+                              className="px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer">
+                              Edit
+                            </button>
+                            <button onClick={() => handleToggleHide(post._id)}
+                              className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer ${post.isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"}`}>
+                              {post.isHidden ? "Show All" : "Hide All"}
+                            </button>
+                            <button onClick={() => setHideFromPost(post)}
+                              className="px-3 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer">
+                              Hide From
+                            </button>
+                            <button onClick={() => handleDeletePost(post._id)}
+                              className="px-3 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer">
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Edit Post</h2>
+              <button onClick={() => { setEditingPost(null); setEditMessage(""); setEditError(""); }}
+                className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-4">
+              {editMessage && <p className="text-green-600 text-sm">{editMessage}</p>}
+              {editError && <p className="text-red-500 text-sm">{editError}</p>}
+              <label className="text-sm font-medium text-gray-700">Title</label>
+              <input type="text" value={editingPost.title}
+                onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D72638]" />
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <input type="text" value={editingPost.description}
+                onChange={(e) => setEditingPost({ ...editingPost, description: e.target.value })}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D72638]" />
+              <label className="text-sm font-medium text-gray-700">Photo URL <span className="text-gray-400">(optional)</span></label>
+              <input type="text" value={editingPost.photo}
+                onChange={(e) => setEditingPost({ ...editingPost, photo: e.target.value })}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D72638]" />
+              <label className="text-sm font-medium text-gray-700">Content</label>
+              <textarea value={editingPost.content} rows={5}
+                onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D72638] resize-none" />
+              <button onClick={handleEditPost} disabled={editLoading}
+                className="bg-[#C41E1E] text-white py-2 px-4 rounded-md hover:bg-[#a31818] disabled:opacity-50 cursor-pointer">
+                {editLoading ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hide From User Modal */}
+      {hideFromPost && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Hide From Users</h2>
+              <button onClick={() => setHideFromPost(null)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 mb-4">
+                Hide <span className="font-semibold text-gray-700">"{hideFromPost.title}"</span> from specific users:
+              </p>
+              {users.length === 0 ? (
+                <p className="text-sm text-gray-400">No users found.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {users.map((user) => {
+                    const isHidden = hideFromPost.hiddenFrom?.includes(user._id);
+                    return (
+                      <div key={user._id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{user.username}</p>
+                          <p className="text-xs text-gray-400">{user.isDisabled ? "Disabled" : "Active"}</p>
+                        </div>
+                        <button
+                          onClick={() => handleHideFromUser(hideFromPost._id, user._id, !isHidden)}
+                          className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer ${isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}>
+                          {isHidden ? "Unhide" : "Hide"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
