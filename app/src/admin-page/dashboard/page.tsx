@@ -25,7 +25,6 @@ import {
 } from "@/app/components/ui/Card";
 import { StatusBadge, DocumentStatus } from "@/app/components/ui/Badge";
 import { cn } from "@/app/lib/utils";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
 // ── Icons ──────────────────────────────────────────────────────
 const DocIcon = () => (
   <svg
@@ -300,7 +299,7 @@ export default function DashboardPage() {
   const [accessTab, setAccessTab] = useState<TabValue>("approved");
 
   return (
-    <ProtectedRoute requiredRole="admin">
+
       <AppShell
         variant="dashboard"
         pageTitle="Dashboard"
@@ -503,6 +502,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </AppShell>
-    </ProtectedRoute>
+
   );
 }

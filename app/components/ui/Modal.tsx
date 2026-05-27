@@ -175,15 +175,15 @@ export const Modal: React.FC<DocumentModalProps> = ({
         <div className="w-2/5 shrink-0 flex flex-col bg-[#FEF0F1]">
           {/* Image fills all available space */}
           <div className="flex-1 flex items-center justify-center overflow-hidden min-h-0">
-            {hasImages ? (
-              <img
-                src={images[imgIndex]}
-                alt={`Document image ${imgIndex + 1}`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ImagePlaceholderIcon />
-            )}
+          {hasImages && images[imgIndex] ? (
+  <img
+    src={images[imgIndex]}
+    alt={`Document image ${imgIndex + 1}`}
+    className="w-full h-full object-cover"
+  />
+) : (
+  <ImagePlaceholderIcon />
+)}
           </div>
 
           {/* Carousel controls pinned at bottom of image panel */}

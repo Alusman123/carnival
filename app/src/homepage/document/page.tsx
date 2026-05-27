@@ -8,7 +8,6 @@ import { AppShell } from "@/app/components/ui/Appshell";
 import { Button } from "@/app/components/ui/Button";
 import Modal from "@/app/components/ui/Modal";
 import { cn } from "@/app/lib/utils";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
 
 // ══════════════════════════════════════════════════════════════
 // TYPES
@@ -291,7 +290,6 @@ export default function DocumentsPage() {
   });
 
   return (
-    <ProtectedRoute requiredRole="admin">
       <AppShell
         variant="home"
         pageTitle="Documents"
@@ -444,6 +442,5 @@ export default function DocumentsPage() {
           images={selectedDoc?.images}
         />
       </AppShell>
-    </ProtectedRoute>
   );
 }

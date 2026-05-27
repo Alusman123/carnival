@@ -12,7 +12,7 @@ import { Badge } from "@/app/components/ui/Badge";
 import { SearchBar } from "@/app/components/ui/SearchBar";
 import { cn } from "@/app/lib/utils";
 import { useNavigation } from "@/app/lib/Navigation";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
+
 
 // ── Icons ──────────────────────────────────────────────────────
 const ChevronRightIcon = () => (
@@ -270,7 +270,7 @@ export default function HomePage() {
   };
 
   return (
-    <ProtectedRoute requiredRole="admin">
+   
       <AppShell
         variant="home"
         pageTitle={`Welcome back, ${username}`}
@@ -400,6 +400,6 @@ export default function HomePage() {
           </Card>
         </div>
       </AppShell>
-    </ProtectedRoute>
+
   );
 }
