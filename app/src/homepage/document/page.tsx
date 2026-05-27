@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+// app/documents/page.tsx  (updated — uses reusable DocumentModal)
+// Replace the old inline DocumentDetailModal with the shared component.
+
+import React, { useState, useRef } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
 import { Button } from "@/app/components/ui/Button";
 import Modal from "@/app/components/ui/Modal";
 import { cn } from "@/app/lib/utils";
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import ProtectedRoute from "@/app/components/ProtectedRoute";
 
 // ══════════════════════════════════════════════════════════════
 // TYPES
@@ -23,14 +25,69 @@ interface DocumentItem {
   tags?: FilterCategory[];
 }
 
-interface Post {
-  _id: string;
-  title: string;
-  description: string;
-  photo: string;
-  content: string;
-  createdAt: string;
-}
+// ══════════════════════════════════════════════════════════════
+// PLACEHOLDER DATA — replace with real API calls
+// ══════════════════════════════════════════════════════════════
+const SAMPLE_DOCUMENTS: DocumentItem[] = [
+  {
+    id: "1",
+    title: "Suggestion to add more categories in Flow Guide.",
+    date: "May 20, 2026 • 10:30 AM",
+    category: "medical-records",
+    tags: ["New Article"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem",
+    images: [""],
+  },
+  {
+    id: "2",
+    title: "Document OCR accuracy can be improved.",
+    date: "May 19, 2026 • 04:15 PM",
+    category: "medical-records",
+    tags: ["New Article", "Saved"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
+    images: [],
+  },
+  {
+    id: "3",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    tags: ["Prescription"],
+    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
+    images: [],
+  },
+  {
+    id: "4",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    tags: ["Saved"],
+    body: "Lorem ipsum dolor sit amet.",
+  },
+  {
+    id: "5",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+    category: "medical-records",
+    body: "Lorem ipsum dolor sit amet.",
+  },
+  {
+    id: "11",
+    title: "Prescription — Amoxicillin 500mg.",
+    date: "May 20, 2026 • 09:00 AM",
+    category: "prescriptions",
+    tags: ["Prescription"],
+    body: "Prescription details for Amoxicillin 500mg.",
+  },
+  {
+    id: "12",
+    title: "Prescription — Metformin 1000mg.",
+    date: "May 17, 2026 • 02:30 PM",
+    category: "prescriptions",
+    tags: ["Prescription", "Saved"],
+    body: "Prescription details for Metformin 1000mg.",
+  },
+];
 
 const ALL_FILTERS: FilterCategory[] = ["Prescription", "New Article", "Saved"];
 
@@ -38,31 +95,59 @@ const ALL_FILTERS: FilterCategory[] = ["Prescription", "New Article", "Saved"];
 // ICONS
 // ══════════════════════════════════════════════════════════════
 const DocFileIcon = () => (
-  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="w-5 h-5 shrink-0"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
     <line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
-
 const SearchIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
-
 const FilterIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="21" y1="6" x2="3" y2="6" />
     <line x1="15" y1="12" x2="9" y2="12" />
     <line x1="11" y1="18" x2="13" y2="18" />
   </svg>
 );
-
 const ChevronDownIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+  >
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
@@ -93,22 +178,37 @@ const FilterDropdown: React.FC<{
   }, [onClose, anchorRef]);
 
   return (
-    <div ref={ref} className="absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-lg border border-gray-100 font-[family-name:var(--font-sans)] p-3">
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-lg border border-gray-100 font-[family-name:var(--font-sans)] p-3"
+    >
       <p className="text-sm font-semibold text-gray-900 mb-3 px-1">Filter</p>
       <div className="space-y-1">
         {ALL_FILTERS.map((cat) => {
           const checked = selected.has(cat);
           return (
-            <label key={cat} className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-150">
+            <label
+              key={cat}
+              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-150"
+            >
               <span
                 onClick={() => onChange(cat)}
                 className={cn(
                   "w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors",
-                  checked ? "bg-[#D72638] border-[#D72638]" : "border-gray-300 bg-white",
+                  checked
+                    ? "bg-[#D72638] border-[#D72638]"
+                    : "border-gray-300 bg-white",
                 )}
               >
                 {checked && (
-                  <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg
+                    className="w-3 h-3 text-white"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  >
                     <polyline points="2 6 5 9 10 3" />
                   </svg>
                 )}
@@ -160,52 +260,13 @@ export default function DocumentsPage() {
   const notifCount = 3;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<Set<FilterCategory>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<Set<FilterCategory>>(
+    new Set(),
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   const filterBtnRef = useRef<HTMLButtonElement>(null);
-
-  // Fetch posts from backend
-  useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`${API}/api/posts`);
-        const data = await res.json();
-
-        // Map posts to DocumentItem format
-        const mapped: DocumentItem[] = data.posts.map((post: Post) => ({
-          id: post._id,
-          title: post.title,
-          date: new Date(post.createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          category: "medical-records",
-          body: post.content,
-          images: post.photo ? [post.photo] : [],
-          tags: [],
-        }));
-
-        setDocuments(mapped);
-      } catch (err) {
-        setError("Failed to load documents.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, []);
 
   const toggleFilter = (cat: FilterCategory) => {
     setActiveFilters((prev) => {
@@ -219,7 +280,7 @@ export default function DocumentsPage() {
     console.log("Search:", searchQuery, "Filters:", [...activeFilters]);
   };
 
-  const visibleDocs = documents.filter((doc) => {
+  const visibleDocs = SAMPLE_DOCUMENTS.filter((doc) => {
     const matchesSearch =
       searchQuery.trim() === "" ||
       doc.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -230,138 +291,159 @@ export default function DocumentsPage() {
   });
 
   return (
-    <AppShell
-      variant="home"
-      pageTitle="Documents"
-      username={username}
-      notifCount={notifCount}
-      showSearch={false}
-    >
-      <div className="w-full space-y-4">
-        {/* ── Search bar + Filter ──────────────────────────── */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 flex items-center">
-            <span className="absolute left-3 text-gray-400 pointer-events-none">
-              <SearchIcon />
-            </span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Search article, document..."
-              className={cn(
-                "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
-                "text-sm text-gray-900 placeholder-gray-400",
-                "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]",
-                "transition-all duration-200 [&::-webkit-search-cancel-button]:hidden",
-              )}
+    <ProtectedRoute requiredRole="admin">
+      <AppShell
+        variant="home"
+        pageTitle="Documents"
+        username={username}
+        notifCount={notifCount}
+        showSearch={false}
+      >
+        <div className="w-full space-y-4">
+          {/* ── Search bar + Filter ──────────────────────────── */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 flex items-center">
+              <span className="absolute left-3 text-gray-400 pointer-events-none">
+                <SearchIcon />
+              </span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Search article, document..."
+                className={cn(
+                  "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
+                  "text-sm text-gray-900 placeholder-gray-400",
+                  "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]",
+                  "transition-all duration-200 [&::-webkit-search-cancel-button]:hidden",
+                )}
+              />
+            </div>
+
+            <Button
+              label="Search"
+              variant="primary"
+              size="md"
+              leftIcon={<SearchIcon />}
+              onClick={handleSearch}
+              className="shrink-0"
             />
+
+            <div className="relative shrink-0">
+              <button
+                ref={filterBtnRef}
+                type="button"
+                onClick={() => setFilterOpen((v) => !v)}
+                aria-label="Filter documents"
+                className={cn(
+                  "h-10 px-3 flex items-center gap-1.5 rounded-xl border",
+                  "text-sm font-medium transition-all duration-150",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+                  filterOpen || activeFilters.size > 0
+                    ? "border-[#D72638] text-[#D72638] bg-[#FEF0F1]"
+                    : "border-gray-200 text-gray-500 bg-white hover:border-gray-300",
+                )}
+              >
+                <FilterIcon />
+                <ChevronDownIcon />
+                {activeFilters.size > 0 && (
+                  <span className="w-4 h-4 flex items-center justify-center rounded-full bg-[#D72638] text-white text-[10px] font-bold">
+                    {activeFilters.size}
+                  </span>
+                )}
+              </button>
+
+              {filterOpen && (
+                <FilterDropdown
+                  selected={activeFilters}
+                  onChange={toggleFilter}
+                  onClose={() => setFilterOpen(false)}
+                  anchorRef={filterBtnRef}
+                />
+              )}
+            </div>
           </div>
 
-          <Button
-            label="Search"
-            variant="primary"
-            size="md"
-            leftIcon={<SearchIcon />}
-            onClick={handleSearch}
-            className="shrink-0"
-          />
-
-          <div className="relative shrink-0">
-            <button
-              ref={filterBtnRef}
-              type="button"
-              onClick={() => setFilterOpen((v) => !v)}
-              aria-label="Filter documents"
-              className={cn(
-                "h-10 px-3 flex items-center gap-1.5 rounded-xl border",
-                "text-sm font-medium transition-all duration-150",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
-                filterOpen || activeFilters.size > 0
-                  ? "border-[#D72638] text-[#D72638] bg-[#FEF0F1]"
-                  : "border-gray-200 text-gray-500 bg-white hover:border-gray-300",
-              )}
-            >
-              <FilterIcon />
-              <ChevronDownIcon />
-              {activeFilters.size > 0 && (
-                <span className="w-4 h-4 flex items-center justify-center rounded-full bg-[#D72638] text-white text-[10px] font-bold">
-                  {activeFilters.size}
+          {/* ── Active filter chips ──────────────────────────── */}
+          {activeFilters.size > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {[...activeFilters].map((cat) => (
+                <span
+                  key={cat}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF0F1] text-[#D72638] text-xs font-medium"
+                >
+                  {cat}
+                  <button
+                    type="button"
+                    onClick={() => toggleFilter(cat)}
+                    className="hover:text-[#B01E2C] focus:outline-none"
+                    aria-label={`Remove ${cat} filter`}
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                    >
+                      <line x1="9" y1="3" x2="3" y2="9" />
+                      <line x1="3" y1="3" x2="9" y2="9" />
+                    </svg>
+                  </button>
                 </span>
-              )}
-            </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setActiveFilters(new Set())}
+                className="text-xs text-gray-400 hover:text-gray-600 underline focus:outline-none"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
 
-            {filterOpen && (
-              <FilterDropdown
-                selected={activeFilters}
-                onChange={toggleFilter}
-                onClose={() => setFilterOpen(false)}
-                anchorRef={filterBtnRef}
-              />
+          {/* ── Document list ────────────────────────────────── */}
+          <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
+            {visibleDocs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
+                  <DocFileIcon />
+                </div>
+                <p className="text-sm font-semibold text-gray-700">
+                  No documents found
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {searchQuery
+                    ? `No results for "${searchQuery}"`
+                    : "Try adjusting your filters."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {visibleDocs.map((doc) => (
+                  <DocumentCard
+                    key={doc.id}
+                    item={doc}
+                    onClick={setSelectedDoc}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* ── Active filter chips ──────────────────────────── */}
-        {activeFilters.size > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {[...activeFilters].map((cat) => (
-              <span key={cat} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF0F1] text-[#D72638] text-xs font-medium">
-                {cat}
-                <button type="button" onClick={() => toggleFilter(cat)} className="hover:text-[#B01E2C] focus:outline-none" aria-label={`Remove ${cat} filter`}>
-                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                    <line x1="9" y1="3" x2="3" y2="9" />
-                    <line x1="3" y1="3" x2="9" y2="9" />
-                  </svg>
-                </button>
-              </span>
-            ))}
-            <button type="button" onClick={() => setActiveFilters(new Set())} className="text-xs text-gray-400 hover:text-gray-600 underline focus:outline-none">
-              Clear all
-            </button>
-          </div>
-        )}
-
-        {/* ── Document list ────────────────────────────────── */}
-        <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-sm text-gray-400">Loading documents...</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-sm text-red-500">{error}</p>
-            </div>
-          ) : visibleDocs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
-                <DocFileIcon />
-              </div>
-              <p className="text-sm font-semibold text-gray-700">No documents found</p>
-              <p className="text-xs text-gray-400 mt-1">
-                {searchQuery ? `No results for "${searchQuery}"` : "No documents have been added yet."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {visibleDocs.map((doc) => (
-                <DocumentCard key={doc.id} item={doc} onClick={setSelectedDoc} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Document Detail Modal ──────────────────────────── */}
-      <Modal
-        isOpen={!!selectedDoc}
-        onClose={() => setSelectedDoc(null)}
-        title={selectedDoc?.title ?? ""}
-        body={selectedDoc?.body}
-        date={selectedDoc?.date}
-        images={selectedDoc?.images}
-      />
-    </AppShell>
+        {/* ── Reusable Document Detail Modal ──────────────────── */}
+        <Modal
+          isOpen={!!selectedDoc}
+          onClose={() => setSelectedDoc(null)}
+          title={selectedDoc?.title ?? ""}
+          body={selectedDoc?.body}
+          date={selectedDoc?.date}
+          images={selectedDoc?.images}
+        />
+      </AppShell>
+    </ProtectedRoute>
   );
 }

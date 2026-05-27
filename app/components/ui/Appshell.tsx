@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/app/lib/utils";
 import { NotifBadge } from "@/app/components/ui/Badge";
 import { Avatar } from "@/app/components/ui/Misc";
+// ✅ Correct import path — matches your actual file location
 import { useNavigation, NavigationAction } from "@/app/lib/Navigation";
 
 const EXPANDED_W = 240;
@@ -12,7 +13,7 @@ const COLLAPSED_W = 72;
 
 interface NavItem {
   label: string;
-  action: NavigationAction;
+  action: NavigationAction; // ← uses NavigationAction instead of raw href
   icon: React.ReactNode;
 }
 
@@ -171,7 +172,7 @@ const SettingsIcon = () => (
     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
   </svg>
 );
-const AdminFunctionIcon = () => (
+const UserManagementIcon = () => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -180,7 +181,10 @@ const AdminFunctionIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+    <line x1="20" y1="8" x2="20" y2="14" />
   </svg>
 );
 const LogoutIcon = () => (
@@ -276,7 +280,7 @@ const LogoMark = () => (
   </div>
 );
 
-// ── Nav configs ────────────────────────────────────────────────
+// ── Nav configs — now use NavigationAction keys, not raw hrefs ──
 export const HOME_NAV: NavItem[] = [
   { label: "Home", action: "home", icon: <HomeIcon /> },
   { label: "Documents", action: "documents", icon: <DocumentIcon /> },
@@ -293,25 +297,12 @@ export const DASHBOARD_NAV: NavItem[] = [
   { label: "Users", action: "dashboardUsers", icon: <UsersIcon /> },
   { label: "Reports", action: "dashboardReports", icon: <ReportsIcon /> },
   { label: "Settings", action: "dashboardSettings", icon: <SettingsIcon /> },
-  { label: "AdminFunction", action: "dashboardAdminFunction", icon: <AdminFunctionIcon /> },
+  {
+    label: "User Management",
+    action: "dashboardAdminFunction",
+    icon: <UserManagementIcon />,
+  },
 ];
-
-// ── Route map for active-state resolution ──────────────────────
-const ACTION_ROUTES: Partial<Record<NavigationAction, string>> = {
-  home: "/",
-  dashboard: "/src/admin-page/dashboard",
-  documents: "/documents",
-  flowGuide: "/flow-guide",
-  updates: "/updates",
-  feedback: "/feedback",
-  dashboardDocuments: "/src/admin-page/dashboard/documents",
-  dashboardAccess: "/src/admin-page/dashboard/access",
-  dashboardFeedback: "/src/admin-page/dashboard/feedback",
-  dashboardUsers: "/src/admin-page/dashboard/users",
-  dashboardReports: "/src/admin-page/dashboard/reports",
-  dashboardSettings: "/src/admin-page/dashboard/settings",
-  dashboardAdminFunction: "/src/admin-page/dashboard/admin-function",
-};
 
 // ── Sidebar ────────────────────────────────────────────────────
 const Sidebar: React.FC<{
@@ -362,14 +353,43 @@ const Sidebar: React.FC<{
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Nav — uses navigate() instead of <Link href> */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5">
         {nav.map((item) => {
-          const route = ACTION_ROUTES[item.action] ?? "";
+          // Resolve the route string from Navigation.ts to check active state
+          // "home" is exact-match; all others use startsWith on the resolved path
           const isActive =
             item.action === "home"
               ? pathname === "/"
-              : pathname.startsWith(route);
+              : pathname.startsWith(
+                  // Strip query string for active check
+                  item.action === "dashboard"
+                    ? "/src/admin-page/dashboard"
+                    : item.action === "documents"
+                      ? "/documents"
+                      : item.action === "flowGuide"
+                        ? "/flow-guide"
+                        : item.action === "updates"
+                          ? "/updates"
+                          : item.action === "feedback"
+                            ? "/feedback"
+                            : item.action === "dashboardDocuments"
+                              ? "/src/admin-page/dashboard/documents"
+                              : item.action === "dashboardAccess"
+                                ? "/src/admin-page/dashboard/access"
+                                : item.action === "dashboardFeedback"
+                                  ? "/src/admin-page/dashboard/feedback"
+                                  : item.action === "dashboardUsers"
+                                    ? "/src/admin-page/dashboard/users"
+                                    : item.action === "dashboardReports"
+                                      ? "/src/admin-page/dashboard/reports"
+                                      : item.action === "dashboardSettings"
+                                        ? "/src/admin-page/dashboard/settings"
+                                        : item.action ===
+                                            "dashboardAdminFunction"
+                                          ? "/src/admin-page/dashboard/user-management"
+                                          : "",
+                );
 
           return (
             <button
@@ -413,6 +433,9 @@ const Sidebar: React.FC<{
           )}
         >
           <div className="flex justify-center py-1">
+            <span className="text-sm font-semibold text-gray-700 hidden sm:block">
+              {username}
+            </span>
             <Avatar name={username} size="sm" />
           </div>
         </div>
@@ -490,6 +513,9 @@ const Topbar: React.FC<{
         </button>
         <NotifBadge count={notifCount} />
       </div>
+      <span className="text-sm font-semibold text-gray-700 hidden sm:block">
+        {username}
+      </span>
       <Avatar name={username} size="sm" />
     </div>
   </header>

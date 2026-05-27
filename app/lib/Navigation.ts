@@ -34,7 +34,7 @@ const ROUTES: Record<NavigationAction, string> = {
 
   // ── Dashboard sidebar ────────────────────────────────────────
   dashboard:            "/src/admin-page/dashboard",
-  dashboardDocuments:   "/src/admin-page/dashboard/documents",
+  dashboardDocuments:   "/src/admin-page/dashboard/document",
   dashboardAccess:      "/src/admin-page/dashboard/access",
   dashboardFeedback:    "/src/admin-page/dashboard/feedback",
   dashboardUsers:       "/src/admin-page/dashboard/users",
