@@ -204,7 +204,7 @@ export default function HomePage() {
   };
 
   return (
-    <ProtectedRoute requiredRole="user">
+   
       <AppShell
         variant="home"
         pageTitle={`Welcome back, ${username}`}
@@ -310,6 +310,6 @@ export default function HomePage() {
           </Card>
         </div>
       </AppShell>
-    </ProtectedRoute>
+   
   );
 }
