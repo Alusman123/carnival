@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
 import {
   Card,
@@ -12,30 +12,16 @@ import { Badge } from "@/app/components/ui/Badge";
 import { SearchBar } from "@/app/components/ui/SearchBar";
 import { cn } from "@/app/lib/utils";
 import { useNavigation } from "@/app/lib/Navigation";
-
+import ProtectedRoute from "@/app/components/ProtectedRoute";
 
 // ── Icons ──────────────────────────────────────────────────────
 const ChevronRightIcon = () => (
-  <svg
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-  >
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 const ArticleIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
@@ -43,52 +29,24 @@ const ArticleIcon = () => (
   </svg>
 );
 const EyeIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const HeartIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
   </svg>
 );
 const GuideIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
   </svg>
 );
 const DiagramIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="5" r="2" />
     <circle cx="5" cy="19" r="2" />
     <circle cx="19" cy="19" r="2" />
@@ -98,41 +56,20 @@ const DiagramIcon = () => (
   </svg>
 );
 const UpdatesIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <polyline points="23 4 23 10 17 10" />
     <polyline points="1 20 1 14 7 14" />
     <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
   </svg>
 );
 const MegaphoneIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
     <path d="M15.54 8.46a5 5 0 010 7.07" />
   </svg>
 );
 const CalendarIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -155,7 +92,6 @@ interface UpdateItem {
   icon: React.ReactNode;
 }
 
-// ── Placeholder data ───────────────────────────────────────────
 const SAMPLE_UPDATES: UpdateItem[] = [
   {
     id: "1",
@@ -195,10 +131,7 @@ const SectionHeader: React.FC<{
         </span>
       )}
     </div>
-    <a
-      href={viewAllHref}
-      className="flex items-center gap-0.5 text-xs font-medium text-[#D72638] hover:underline focus:outline-none"
-    >
+    <a href={viewAllHref} className="flex items-center gap-0.5 text-xs font-medium text-[#D72638] hover:underline focus:outline-none">
       View all <ChevronRightIcon />
     </a>
   </CardHeader>
@@ -210,7 +143,7 @@ const FeatureCard: React.FC<{
   subtitle: string;
   icon: React.ReactNode;
   onClick: () => void;
-}> = ({ title, subtitle, icon, onClick = () => {} }) => (
+}> = ({ title, subtitle, icon, onClick }) => (
   <button
     onClick={onClick}
     className={cn(
@@ -225,9 +158,7 @@ const FeatureCard: React.FC<{
       {icon}
     </div>
     <div>
-      <p className="text-lg font-bold text-[#D72638] group-hover:text-[#B01E2C] transition-colors duration-150">
-        {title}
-      </p>
+      <p className="text-lg font-bold text-[#D72638] group-hover:text-[#B01E2C] transition-colors duration-150">{title}</p>
       <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
     </div>
   </button>
@@ -240,9 +171,7 @@ const UpdateRow: React.FC<{ item: UpdateItem }> = ({ item }) => (
       {item.icon}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-semibold text-gray-900 truncate">
-        {item.title}
-      </p>
+      <p className="text-sm font-semibold text-gray-900 truncate">{item.title}</p>
       <p className="text-xs text-gray-400 mt-0.5">{item.date}</p>
     </div>
     <Badge label={item.tag} variant={TAG_VARIANT[item.tag]} size="sm" />
@@ -251,26 +180,31 @@ const UpdateRow: React.FC<{ item: UpdateItem }> = ({ item }) => (
 
 // ── HOME PAGE ──────────────────────────────────────────────────
 export default function HomePage() {
-  const username = "Urdanetz"; // DATA: auth context → user.name
-  const notifCount = 3; // DATA: notification API → unread count
-  const newUpdates = 4; // DATA: updates API → new/unread count
-
-  // ── Search state ─────────────────────────────────────────────
+  const [username, setUsername] = useState("there");
+  const notifCount = 3;
+  const newUpdates = 4;
   const [searchQuery, setSearchQuery] = useState("");
-
   const { navigate } = useNavigation();
 
-  // ── Fix 1: was `fetchResults` (undefined) — now a proper handler ──
-  // TODO: replace the console.log with your real search API call
-  // e.g. const results = await searchDocuments(value);
+  // Get username from localStorage
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.username) setUsername(user.username);
+      }
+    } catch {
+      // fallback to default
+    }
+  }, []);
+
   const handleSearch = (value: string) => {
     console.log("Search:", value);
-    // TODO: call your search API here, e.g.:
-    // router.push(`/search?q=${encodeURIComponent(value)}`);
   };
 
   return (
-   
+    <ProtectedRoute requiredRole="user">
       <AppShell
         variant="home"
         pageTitle={`Welcome back, ${username}`}
@@ -278,15 +212,7 @@ export default function HomePage() {
         notifCount={notifCount}
         showSearch={false}
       >
-        {/*
-        Fix 2: Responsive layout
-        - Removed max-w-4xl so the content fills the full available width
-        - Used w-full so every section stretches edge-to-edge
-        - AppShell's <main> already has p-6, so no extra padding needed here
-      */}
         <div className="w-full space-y-5">
-          {/* Search bar — full width on mobile, capped on desktop */}
-          {/* Fix 1: removed fetchResults — now calls handleSearch */}
           <SearchBar
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -298,23 +224,22 @@ export default function HomePage() {
           />
 
           {/* ── 1. Feature cards ──────────────────────────────── */}
-          {/* flex-col on mobile → flex-row on sm+ */}
           <div className="flex flex-col sm:flex-row gap-4">
             <FeatureCard
               title="New Article"
-              subtitle="12 New This Week" // DATA: articles API → new this week
+              subtitle="12 New This Week"
               icon={<ArticleIcon />}
               onClick={() => navigate("documents")}
             />
             <FeatureCard
               title="Most Viewed"
-              subtitle="Top 10 This Month" // DATA: analytics API → top viewed
+              subtitle="Top 10 This Month"
               icon={<EyeIcon />}
               onClick={() => navigate("documents")}
             />
             <FeatureCard
               title="Saved"
-              subtitle="8 Saved Articles" // DATA: saved API → saved count
+              subtitle="8 Saved Articles"
               icon={<HeartIcon />}
               onClick={() => navigate("documents")}
             />
@@ -323,7 +248,6 @@ export default function HomePage() {
           {/* ── 2. Flow Guide ─────────────────────────────────── */}
           <Card variant="default" padding="md">
             <SectionHeader title="Flow Guide" viewAllHref="/flow-guide" />
-            {/* 1 col on mobile, 2 col on md+ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoCard
                 title="Standard Procedures"
@@ -333,9 +257,7 @@ export default function HomePage() {
                 iconColor="text-[#D72638]"
                 action={{
                   label: "Open Guide",
-                  onClick: () => {
-                    window.location.href = "/flow-guide/standard";
-                  },
+                  onClick: () => { window.location.href = "/flow-guide/standard"; },
                 }}
               />
               <InfoCard
@@ -346,9 +268,7 @@ export default function HomePage() {
                 iconColor="text-[#D72638]"
                 action={{
                   label: "View Diagrams",
-                  onClick: () => {
-                    window.location.href = "/flow-guide/diagrams";
-                  },
+                  onClick: () => { window.location.href = "/flow-guide/diagrams"; },
                 }}
               />
             </div>
@@ -356,22 +276,13 @@ export default function HomePage() {
 
           {/* ── 3. Updates ────────────────────────────────────── */}
           <Card variant="default" padding="md">
-            <SectionHeader
-              title="Updates"
-              viewAllHref="/updates"
-              badge={newUpdates}
-            />
-
-            {/* Stack on mobile, side-by-side on md+ */}
+            <SectionHeader title="Updates" viewAllHref="/updates" badge={newUpdates} />
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Left: graphic card — full width on mobile, fixed on md+ */}
-              <div
-                className={cn(
-                  "flex flex-col items-center justify-center gap-3",
-                  "rounded-xl border border-gray-100 bg-gray-50 p-6",
-                  "w-full md:w-48 shrink-0",
-                )}
-              >
+              <div className={cn(
+                "flex flex-col items-center justify-center gap-3",
+                "rounded-xl border border-gray-100 bg-gray-50 p-6",
+                "w-full md:w-48 shrink-0",
+              )}>
                 <div className="w-14 h-14 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] [&>svg]:w-8 [&>svg]:h-8">
                   <UpdatesIcon />
                 </div>
@@ -385,7 +296,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right: update rows — grows to fill remaining space */}
               <div className="flex-1 min-w-0 divide-y divide-gray-50">
                 {SAMPLE_UPDATES.map((item) => (
                   <UpdateRow key={item.id} item={item} />
@@ -400,6 +310,6 @@ export default function HomePage() {
           </Card>
         </div>
       </AppShell>
-
+    </ProtectedRoute>
   );
 }
