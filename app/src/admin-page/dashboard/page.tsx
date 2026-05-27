@@ -1,32 +1,32 @@
 "use client";
 
-// app/dashboard/page.tsx  (or wherever your Dashboard route lives)
+// app/src/admin-page/dashboard/page.tsx
 // ─────────────────────────────────────────────────────────────
-// Admin Dashboard page
+// Admin Dashboard — redesigned to match the image
 //
-// Sections:
-//   1. Stats row  (Total Documents, Access Requests, Feedback, Users)
-//   2. Documents table  (Approved / Pending / Denied tabs)
-//   3. Access table     (Approved / Pending / Denied tabs)
-//   4. Feedback table   (New / In Review / Resolved)
+// Changes from previous version:
+//   • AppShell variant="dashboard" — uses DASHBOARD_NAV with
+//     User Management added
+//   • Topbar shows username text "Admin" next to avatar
+//   • StatsCard with bordered variant + larger numbers
+//   • Tables unchanged in structure, tightened in style
+//   • Full-width layout (removed max-w-6xl cap)
 //
-// DATA: All values marked with // DATA — replace with API calls.
+// DATA: All values marked // DATA — replace with API calls.
 // ─────────────────────────────────────────────────────────────
 
 import React, { useState } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
-
 import {
   Card,
   CardHeader,
   CardTitle,
   StatsCard,
-  StatusBadge,
-  DocumentStatus,
-} from "@/app/types";
+} from "@/app/components/ui/Card";
+import { StatusBadge, DocumentStatus } from "@/app/components/ui/Badge";
 import { cn } from "@/app/lib/utils";
-
-// ── Icons ─────────────────────────────────────────────────────
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+// ── Icons ──────────────────────────────────────────────────────
 const DocIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -38,6 +38,8 @@ const DocIcon = () => (
   >
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
     <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
 const AccessIcon = () => (
@@ -107,13 +109,12 @@ const ChevronRightIcon = () => (
   </svg>
 );
 
-// ── Placeholder DATA types ─────────────────────────────────────
-// Replace these with types from your actual API response
+// ── Types ──────────────────────────────────────────────────────
 interface DocumentRow {
   id: string;
   name: string; // DATA: document.name
   submittedBy: string; // DATA: document.submittedBy.name
-  date: string; // DATA: document.createdAt (formatted)
+  date: string; // DATA: document.createdAt formatted
   status: DocumentStatus; // DATA: document.status
 }
 interface AccessRow {
@@ -121,17 +122,17 @@ interface AccessRow {
   userName: string; // DATA: access.user.name
   requestedResource: string; // DATA: access.resource
   date: string; // DATA: access.requestedAt
-  status: DocumentStatus; // DATA: access.status
+  status: DocumentStatus;
 }
 interface FeedbackRow {
   id: string;
   userName: string; // DATA: feedback.user.name
   feedback: string; // DATA: feedback.message
   date: string; // DATA: feedback.createdAt
-  status: DocumentStatus; // DATA: feedback.status
+  status: DocumentStatus;
 }
 
-// ── PLACEHOLDER DATA — replace with real API calls ─────────────
+// ── Placeholder data ───────────────────────────────────────────
 const SAMPLE_DOCUMENTS: DocumentRow[] = [
   {
     id: "1",
@@ -202,7 +203,7 @@ const SAMPLE_FEEDBACK: FeedbackRow[] = [
   },
 ];
 
-// ── Reusable tab bar ───────────────────────────────────────────
+// ── Tab bar ────────────────────────────────────────────────────
 type TabValue = "approved" | "pending" | "denied";
 const TABS: { label: string; value: TabValue }[] = [
   { label: "Approved", value: "approved" },
@@ -214,14 +215,14 @@ const TableTabs: React.FC<{
   active: TabValue;
   onChange: (v: TabValue) => void;
 }> = ({ active, onChange }) => (
-  <div className="flex gap-4 mb-4">
+  <div className="flex gap-5 mb-4 border-b border-gray-100 pb-0">
     {TABS.map((tab) => (
       <button
         key={tab.value}
         type="button"
         onClick={() => onChange(tab.value)}
         className={cn(
-          "text-sm font-medium pb-1 border-b-2 transition-colors duration-150 focus:outline-none",
+          "text-sm font-medium pb-2 border-b-2 -mb-px transition-colors duration-150 focus:outline-none",
           active === tab.value
             ? "border-[#D72638] text-[#D72638]"
             : "border-transparent text-gray-400 hover:text-gray-600",
@@ -233,14 +234,14 @@ const TableTabs: React.FC<{
   </div>
 );
 
-// ── Table column header ────────────────────────────────────────
+// ── Table primitives ───────────────────────────────────────────
 const Th: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
   className,
 }) => (
   <th
     className={cn(
-      "text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-2 px-3",
+      "text-left text-xs font-semibold text-gray-400 uppercase tracking-wide py-2.5 px-4",
       className,
     )}
   >
@@ -253,7 +254,7 @@ const Td: React.FC<{ children: React.ReactNode; className?: string }> = ({
 }) => (
   <td
     className={cn(
-      "text-sm text-gray-700 py-3 px-3 border-b border-gray-50",
+      "text-sm text-gray-700 py-3 px-4 border-b border-gray-50 last:border-0",
       className,
     )}
   >
@@ -261,14 +262,15 @@ const Td: React.FC<{ children: React.ReactNode; className?: string }> = ({
   </td>
 );
 
-// ── Section header with "View all" ─────────────────────────────
+// ── Section header ─────────────────────────────────────────────
 const SectionHeader: React.FC<{
   title: string;
   viewAllHref?: string;
+  viewAllLabel?: string;
   icon: React.ReactNode;
-}> = ({ title, viewAllHref = "#", icon }) => (
+}> = ({ title, viewAllHref = "#", viewAllLabel, icon }) => (
   <CardHeader>
-    <div className="flex items-center gap-2 text-[#D72638] [&>svg]:w-5 [&>svg]:h-5">
+    <div className="flex items-center gap-2 [&>svg]:w-5 [&>svg]:h-5 text-[#D72638]">
       {icon}
       <CardTitle>{title}</CardTitle>
     </div>
@@ -276,222 +278,231 @@ const SectionHeader: React.FC<{
       href={viewAllHref}
       className="flex items-center gap-0.5 text-xs font-medium text-[#D72638] hover:underline focus:outline-none"
     >
-      View all {title.toLowerCase()} <ChevronRightIcon />
+      {viewAllLabel ?? `View all ${title.toLowerCase()}`} <ChevronRightIcon />
     </a>
   </CardHeader>
 );
 
 // ── DASHBOARD PAGE ─────────────────────────────────────────────
 export default function DashboardPage() {
-  // ── DATA: replace with real auth + API data ────────────────
+  // DATA: replace with auth context + API calls
   const username = "Admin"; // DATA: auth context → user.name
-  const notifCount = 6; // DATA: notification API → unread count
+  const notifCount = 5; // DATA: notification API → unread count
 
   const stats = {
-    totalDocs: 128, // DATA: documents API → total
-    accessReqs: 96, // DATA: access API → total requests
-    feedbackCount: 42, // DATA: feedback API → total
-    totalUsers: 215, // DATA: users API → total
+    totalDocs: 128, // DATA: documents API
+    accessReqs: 96, // DATA: access API
+    feedbackCount: 42, // DATA: feedback API
+    totalUsers: 215, // DATA: users API
   };
 
-  // Tab state per section
   const [docTab, setDocTab] = useState<TabValue>("approved");
   const [accessTab, setAccessTab] = useState<TabValue>("approved");
 
   return (
-    <AppShell
-      variant="dashboard"
-      pageTitle="Dashboard"
-      username={username}
-      notifCount={notifCount}
-      showSearch={false} // Dashboard hides the search bar per the design
-    >
-      <div className="space-y-5 max-w-6xl">
-        {/* ── 1. Stats row ──────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Documents"
-            value={stats.totalDocs} // DATA
-            icon={<DocIcon />}
-            iconBg="bg-[#FEF0F1]"
-            iconColor="text-[#D72638]"
-          />
-          <StatsCard
-            title="Total Access Requests"
-            value={stats.accessReqs} // DATA
-            icon={<AccessIcon />}
-            iconBg="bg-[#FEF0F1]"
-            iconColor="text-[#D72638]"
-          />
-          <StatsCard
-            title="Total Feedback"
-            value={stats.feedbackCount} // DATA
-            icon={<FeedbackIcon />}
-            iconBg="bg-[#FEF0F1]"
-            iconColor="text-[#D72638]"
-          />
-          <StatsCard
-            title="Total Users"
-            value={stats.totalUsers} // DATA
-            icon={<UsersIcon />}
-            iconBg="bg-[#FEF0F1]"
-            iconColor="text-[#D72638]"
-          />
+    <ProtectedRoute requiredRole="admin">
+      <AppShell
+        variant="dashboard"
+        pageTitle="Dashboard"
+        username={username}
+        notifCount={notifCount}
+        showSearch={false}
+        // Passes username to topbar so "Admin" text shows next to avatar
+      >
+        {/* Full width — no max-w cap, fills available space */}
+        <div className="w-full space-y-5">
+          {/* ── 1. Stats row ──────────────────────────────────── */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Each StatsCard uses the bordered variant to match the image */}
+            <StatsCard
+              title="Total Documents"
+              value={stats.totalDocs} // DATA
+              icon={<DocIcon />}
+              iconBg="bg-[#FEF0F1]"
+              iconColor="text-[#D72638]"
+              className="border border-[#D72638]/20"
+            />
+            <StatsCard
+              title="Total Access Requests"
+              value={stats.accessReqs} // DATA
+              icon={<AccessIcon />}
+              iconBg="bg-[#FEF0F1]"
+              iconColor="text-[#D72638]"
+              className="border border-[#D72638]/20"
+            />
+            <StatsCard
+              title="Total Feedback"
+              value={stats.feedbackCount} // DATA
+              icon={<FeedbackIcon />}
+              iconBg="bg-[#FEF0F1]"
+              iconColor="text-[#D72638]"
+              className="border border-[#D72638]/20"
+            />
+            <StatsCard
+              title="Total Users"
+              value={stats.totalUsers} // DATA
+              icon={<UsersIcon />}
+              iconBg="bg-[#FEF0F1]"
+              iconColor="text-[#D72638]"
+              className="border border-[#D72638]/20"
+            />
+          </div>
+
+          {/* ── 2. Documents table ────────────────────────────── */}
+          <Card variant="default" padding="md">
+            <SectionHeader
+              title="Documents"
+              viewAllHref="/src/admin-page/dashboard/documents"
+              viewAllLabel="View all documents"
+              icon={<DocIcon />}
+            />
+            <TableTabs active={docTab} onChange={setDocTab} />
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <Th>Document Name</Th>
+                    <Th>Submitted By</Th>
+                    <Th>Date</Th>
+                    <Th>Status</Th>
+                    <Th className="text-right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* DATA: replace with API result filtered by docTab */}
+                  {SAMPLE_DOCUMENTS.map((doc) => (
+                    <tr
+                      key={doc.id}
+                      className="hover:bg-gray-50/70 transition-colors"
+                    >
+                      <Td className="font-medium text-gray-900">{doc.name}</Td>
+                      <Td>{doc.submittedBy}</Td>
+                      <Td>{doc.date}</Td>
+                      <Td>
+                        <StatusBadge status={doc.status} size="sm" />
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          aria-label={`View ${doc.name}`}
+                          className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none p-1 rounded"
+                        >
+                          <EyeIcon />
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* ── 3. Access table ───────────────────────────────── */}
+          <Card variant="default" padding="md">
+            <SectionHeader
+              title="Access"
+              viewAllHref="/src/admin-page/dashboard/access"
+              viewAllLabel="View all access"
+              icon={<AccessIcon />}
+            />
+            <TableTabs active={accessTab} onChange={setAccessTab} />
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <Th>User Name</Th>
+                    <Th>Requested Resource</Th>
+                    <Th>Date</Th>
+                    <Th>Status</Th>
+                    <Th className="text-right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* DATA: replace with API result filtered by accessTab */}
+                  {SAMPLE_ACCESS.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-gray-50/70 transition-colors"
+                    >
+                      <Td className="font-medium text-gray-900">
+                        {row.userName}
+                      </Td>
+                      <Td>{row.requestedResource}</Td>
+                      <Td>{row.date}</Td>
+                      <Td>
+                        <StatusBadge status={row.status} size="sm" />
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          aria-label={`View ${row.userName}'s request`}
+                          className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none p-1 rounded"
+                        >
+                          <EyeIcon />
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* ── 4. Feedback table ─────────────────────────────── */}
+          <Card variant="default" padding="md">
+            <SectionHeader
+              title="Feedback"
+              viewAllHref="/src/admin-page/dashboard/feedback"
+              viewAllLabel="View all feedback"
+              icon={<FeedbackIcon />}
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <Th>User Name</Th>
+                    <Th>Feedback</Th>
+                    <Th>Date</Th>
+                    <Th>Status</Th>
+                    <Th className="text-right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* DATA: replace with real feedback API data */}
+                  {SAMPLE_FEEDBACK.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-gray-50/70 transition-colors"
+                    >
+                      <Td className="font-medium text-gray-900 whitespace-nowrap">
+                        {row.userName}
+                      </Td>
+                      <Td className="max-w-[240px]">
+                        <span className="truncate block text-gray-500">
+                          {row.feedback}
+                        </span>
+                      </Td>
+                      <Td>{row.date}</Td>
+                      <Td>
+                        <StatusBadge status={row.status} size="sm" />
+                      </Td>
+                      <Td className="text-right">
+                        <button
+                          type="button"
+                          aria-label={`View ${row.userName}'s feedback`}
+                          className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none p-1 rounded"
+                        >
+                          <EyeIcon />
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
-
-        {/* ── 2. Documents table ────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader
-            title="Documents"
-            viewAllHref="/dashboard/documents"
-            icon={<DocIcon />}
-          />
-          <TableTabs active={docTab} onChange={setDocTab} />
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <Th>Document Name</Th>
-                  <Th>Submitted By</Th>
-                  <Th>Date</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* DATA: replace SAMPLE_DOCUMENTS with API result filtered by docTab */}
-                {SAMPLE_DOCUMENTS.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <Td className="font-medium text-gray-900">{doc.name}</Td>
-                    <Td>{doc.submittedBy}</Td>
-                    <Td>{doc.date}</Td>
-                    <Td>
-                      <StatusBadge status={doc.status} />
-                    </Td>
-                    <Td className="text-right">
-                      <button
-                        type="button"
-                        aria-label={`View ${doc.name}`}
-                        className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none"
-                      >
-                        <EyeIcon />
-                      </button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* ── 3. Access table ───────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader
-            title="Access"
-            viewAllHref="/dashboard/access"
-            icon={<AccessIcon />}
-          />
-          <TableTabs active={accessTab} onChange={setAccessTab} />
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <Th>User Name</Th>
-                  <Th>Requested Resource</Th>
-                  <Th>Date</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* DATA: replace SAMPLE_ACCESS with API result filtered by accessTab */}
-                {SAMPLE_ACCESS.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <Td className="font-medium text-gray-900">
-                      {row.userName}
-                    </Td>
-                    <Td>{row.requestedResource}</Td>
-                    <Td>{row.date}</Td>
-                    <Td>
-                      <StatusBadge status={row.status} />
-                    </Td>
-                    <Td className="text-right">
-                      <button
-                        type="button"
-                        aria-label={`View ${row.userName}'s request`}
-                        className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none"
-                      >
-                        <EyeIcon />
-                      </button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* ── 4. Feedback table ─────────────────────────────── */}
-        <Card variant="default" padding="md">
-          <SectionHeader
-            title="Feedback"
-            viewAllHref="/dashboard/feedback"
-            icon={<FeedbackIcon />}
-          />
-          {/* Feedback uses status labels (New / In Review / Resolved) not tabs */}
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <Th>User Name</Th>
-                  <Th>Feedback</Th>
-                  <Th>Date</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* DATA: replace SAMPLE_FEEDBACK with API result */}
-                {SAMPLE_FEEDBACK.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <Td className="font-medium text-gray-900 whitespace-nowrap">
-                      {row.userName}
-                    </Td>
-                    <Td className="max-w-[200px] truncate text-gray-500">
-                      {row.feedback}
-                    </Td>
-                    <Td>{row.date}</Td>
-                    <Td>
-                      <StatusBadge status={row.status} />
-                    </Td>
-                    <Td className="text-right">
-                      <button
-                        type="button"
-                        aria-label={`View ${row.userName}'s feedback`}
-                        className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none"
-                      >
-                        <EyeIcon />
-                      </button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    </AppShell>
+      </AppShell>
+    </ProtectedRoute>
   );
 }
