@@ -1,13 +1,12 @@
 "use client";
 
-// app/documents/page.tsx  (updated — uses reusable DocumentModal)
-// Replace the old inline DocumentDetailModal with the shared component.
-
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { AppShell } from "@/app/components/ui/Appshell";
 import { Button } from "@/app/components/ui/Button";
 import Modal from "@/app/components/ui/Modal";
 import { cn } from "@/app/lib/utils";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 // ══════════════════════════════════════════════════════════════
 // TYPES
@@ -24,71 +23,19 @@ interface DocumentItem {
   tags?: FilterCategory[];
 }
 
-// ══════════════════════════════════════════════════════════════
-// PLACEHOLDER DATA — replace with real API calls
-// ══════════════════════════════════════════════════════════════
-const SAMPLE_DOCUMENTS: DocumentItem[] = [
-  {
-    id: "1",
-    title: "Suggestion to add more categories in Flow Guide.",
-    date: "May 20, 2026 • 10:30 AM",
-    category: "medical-records",
-    tags: ["New Article"],
-    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem\n\nLorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem",
-    images: [""],
-  },
-  {
-    id: "2",
-    title: "Document OCR accuracy can be improved.",
-    date: "May 19, 2026 • 04:15 PM",
-    category: "medical-records",
-    tags: ["New Article", "Saved"],
-    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
-    images: [],
-  },
-  {
-    id: "3",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-    tags: ["Prescription"],
-    body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum.",
-    images: [],
-  },
-  {
-    id: "4",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-    tags: ["Saved"],
-    body: "Lorem ipsum dolor sit amet.",
-  },
-  {
-    id: "5",
-    title: "Need access to more reference articles.",
-    date: "May 18, 2026 • 11:20 AM",
-    category: "medical-records",
-    body: "Lorem ipsum dolor sit amet.",
-  },
-  {
-    id: "11",
-    title: "Prescription — Amoxicillin 500mg.",
-    date: "May 20, 2026 • 09:00 AM",
-    category: "prescriptions",
-    tags: ["Prescription"],
-    body: "Prescription details for Amoxicillin 500mg.",
-  },
-  {
-    id: "12",
-    title: "Prescription — Metformin 1000mg.",
-    date: "May 17, 2026 • 02:30 PM",
-    category: "prescriptions",
-    tags: ["Prescription", "Saved"],
-    body: "Prescription details for Metformin 1000mg.",
-  },
-];
+interface Post {
+  _id: string;
+  title: string;
+  description: string;
+  photo?: string;
+  createdAt: string;
+}
 
-const ALL_FILTERS: FilterCategory[] = ["Prescription", "New Article", "Saved"];
+const ALL_FILTERS: FilterCategory[] = [
+  "Prescription",
+  "New Article",
+  "Saved",
+];
 
 // ══════════════════════════════════════════════════════════════
 // ICONS
@@ -109,6 +56,7 @@ const DocFileIcon = () => (
     <line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
+
 const SearchIcon = () => (
   <svg
     className="w-4 h-4"
@@ -123,6 +71,7 @@ const SearchIcon = () => (
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
+
 const FilterIcon = () => (
   <svg
     className="w-4 h-4"
@@ -138,6 +87,7 @@ const FilterIcon = () => (
     <line x1="11" y1="18" x2="13" y2="18" />
   </svg>
 );
+
 const ChevronDownIcon = () => (
   <svg
     className="w-4 h-4"
@@ -162,33 +112,40 @@ const FilterDropdown: React.FC<{
 }> = ({ selected, onChange, onClose, anchorRef }) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
         ref.current &&
         !ref.current.contains(e.target as Node) &&
         anchorRef.current &&
         !anchorRef.current.contains(e.target as Node)
-      )
+      ) {
         onClose();
+      }
     };
+
     document.addEventListener("mousedown", handler);
+
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose, anchorRef]);
 
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-lg border border-gray-100 font-[family-name:var(--font-sans)] p-3"
+      className="absolute right-0 top-full mt-2 z-40 w-52 bg-white rounded-xl shadow-lg border border-gray-100 p-3"
     >
-      <p className="text-sm font-semibold text-gray-900 mb-3 px-1">Filter</p>
+      <p className="text-sm font-semibold text-gray-900 mb-3 px-1">
+        Filter
+      </p>
+
       <div className="space-y-1">
         {ALL_FILTERS.map((cat) => {
           const checked = selected.has(cat);
+
           return (
             <label
               key={cat}
-              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-150"
+              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
             >
               <span
                 onClick={() => onChange(cat)}
@@ -196,7 +153,7 @@ const FilterDropdown: React.FC<{
                   "w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors",
                   checked
                     ? "bg-[#D72638] border-[#D72638]"
-                    : "border-gray-300 bg-white",
+                    : "border-gray-300 bg-white"
                 )}
               >
                 {checked && (
@@ -212,6 +169,7 @@ const FilterDropdown: React.FC<{
                   </svg>
                 )}
               </span>
+
               <span className="text-sm text-gray-700">{cat}</span>
             </label>
           );
@@ -222,7 +180,7 @@ const FilterDropdown: React.FC<{
 };
 
 // ══════════════════════════════════════════════════════════════
-// DOCUMENT CARD ROW
+// DOCUMENT CARD
 // ══════════════════════════════════════════════════════════════
 const DocumentCard: React.FC<{
   item: DocumentItem;
@@ -236,211 +194,252 @@ const DocumentCard: React.FC<{
       "rounded-xl border border-gray-200 bg-white",
       "hover:border-[#D72638]/50 hover:shadow-sm",
       "transition-all duration-150 group focus:outline-none",
-      "focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+      "focus-visible:ring-2 focus-visible:ring-[#D72638]/30"
     )}
   >
     <div className="text-[#D72638] shrink-0">
       <DocFileIcon />
     </div>
+
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#D72638] transition-colors duration-150">
+      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#D72638] transition-colors">
         {item.title}
       </p>
+
       <p className="text-xs text-gray-400 mt-0.5">{item.date}</p>
     </div>
   </button>
 );
 
 // ══════════════════════════════════════════════════════════════
-// DOCUMENTS PAGE
+// PAGE
 // ══════════════════════════════════════════════════════════════
 export default function DocumentsPage() {
   const username = "Urdanetz";
   const notifCount = 3;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<Set<FilterCategory>>(
-    new Set(),
-  );
+  const [activeFilters, setActiveFilters] = useState<
+    Set<FilterCategory>
+  >(new Set());
+
   const [filterOpen, setFilterOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
+
+  const [selectedDoc, setSelectedDoc] =
+    useState<DocumentItem | null>(null);
+
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const filterBtnRef = useRef<HTMLButtonElement>(null);
 
+  // ════════════════════════════════════════════════════════════
+  // FETCH POSTS FROM BACKEND
+  // ════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const res = await fetch(`${API}/api/posts`);
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch");
+        }
+
+        const data = await res.json();
+
+        const mapped: DocumentItem[] = data.posts.map(
+          (post: Post) => ({
+            id: post._id,
+
+            title: post.title,
+
+            date: new Date(post.createdAt).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }
+            ),
+
+            category: "medical-records",
+
+            body: post.description,
+
+            images:
+              post.photo && post.photo.trim() !== ""
+                ? [post.photo]
+                : [],
+
+            tags: [],
+          })
+        );
+
+        setDocuments(mapped);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load documents.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
+
+  // ════════════════════════════════════════════════════════════
+  // FILTERS
+  // ════════════════════════════════════════════════════════════
   const toggleFilter = (cat: FilterCategory) => {
     setActiveFilters((prev) => {
       const next = new Set(prev);
-      next.has(cat) ? next.delete(cat) : next.add(cat);
+
+      next.has(cat)
+        ? next.delete(cat)
+        : next.add(cat);
+
       return next;
     });
   };
 
   const handleSearch = () => {
-    console.log("Search:", searchQuery, "Filters:", [...activeFilters]);
+    console.log(searchQuery);
   };
 
-  const visibleDocs = SAMPLE_DOCUMENTS.filter((doc) => {
+  const visibleDocs = documents.filter((doc) => {
     const matchesSearch =
       searchQuery.trim() === "" ||
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
     const matchesFilter =
       activeFilters.size === 0 ||
-      (doc.tags ?? []).some((t) => activeFilters.has(t));
+      (doc.tags ?? []).some((t) =>
+        activeFilters.has(t)
+      );
+
     return matchesSearch && matchesFilter;
   });
 
   return (
-      <AppShell
-        variant="home"
-        pageTitle="Documents"
-        username={username}
-        notifCount={notifCount}
-        showSearch={false}
-      >
-        <div className="w-full space-y-4">
-          {/* ── Search bar + Filter ──────────────────────────── */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <SearchIcon />
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Search article, document..."
-                className={cn(
-                  "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
-                  "text-sm text-gray-900 placeholder-gray-400",
-                  "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]",
-                  "transition-all duration-200 [&::-webkit-search-cancel-button]:hidden",
-                )}
-              />
-            </div>
+    <AppShell
+      variant="home"
+      pageTitle="Documents"
+      username={username}
+      notifCount={notifCount}
+      showSearch={false}
+    >
+      <div className="w-full space-y-4">
+        {/* SEARCH */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <SearchIcon />
+            </span>
 
-            <Button
-              label="Search"
-              variant="primary"
-              size="md"
-              leftIcon={<SearchIcon />}
-              onClick={handleSearch}
-              className="shrink-0"
-            />
-
-            <div className="relative shrink-0">
-              <button
-                ref={filterBtnRef}
-                type="button"
-                onClick={() => setFilterOpen((v) => !v)}
-                aria-label="Filter documents"
-                className={cn(
-                  "h-10 px-3 flex items-center gap-1.5 rounded-xl border",
-                  "text-sm font-medium transition-all duration-150",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
-                  filterOpen || activeFilters.size > 0
-                    ? "border-[#D72638] text-[#D72638] bg-[#FEF0F1]"
-                    : "border-gray-200 text-gray-500 bg-white hover:border-gray-300",
-                )}
-              >
-                <FilterIcon />
-                <ChevronDownIcon />
-                {activeFilters.size > 0 && (
-                  <span className="w-4 h-4 flex items-center justify-center rounded-full bg-[#D72638] text-white text-[10px] font-bold">
-                    {activeFilters.size}
-                  </span>
-                )}
-              </button>
-
-              {filterOpen && (
-                <FilterDropdown
-                  selected={activeFilters}
-                  onChange={toggleFilter}
-                  onClose={() => setFilterOpen(false)}
-                  anchorRef={filterBtnRef}
-                />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+              onKeyDown={(e) =>
+                e.key === "Enter" && handleSearch()
+              }
+              placeholder="Search article, document..."
+              className={cn(
+                "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
+                "text-sm text-gray-900 placeholder-gray-400",
+                "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]"
               )}
-            </div>
+            />
           </div>
 
-          {/* ── Active filter chips ──────────────────────────── */}
-          {activeFilters.size > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {[...activeFilters].map((cat) => (
-                <span
-                  key={cat}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF0F1] text-[#D72638] text-xs font-medium"
-                >
-                  {cat}
-                  <button
-                    type="button"
-                    onClick={() => toggleFilter(cat)}
-                    className="hover:text-[#B01E2C] focus:outline-none"
-                    aria-label={`Remove ${cat} filter`}
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                    >
-                      <line x1="9" y1="3" x2="3" y2="9" />
-                      <line x1="3" y1="3" x2="9" y2="9" />
-                    </svg>
-                  </button>
-                </span>
-              ))}
-              <button
-                type="button"
-                onClick={() => setActiveFilters(new Set())}
-                className="text-xs text-gray-400 hover:text-gray-600 underline focus:outline-none"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
+          <Button
+            label="Search"
+            variant="primary"
+            size="md"
+            leftIcon={<SearchIcon />}
+            onClick={handleSearch}
+            className="shrink-0"
+          />
 
-          {/* ── Document list ────────────────────────────────── */}
-          <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
-            {visibleDocs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
-                  <DocFileIcon />
-                </div>
-                <p className="text-sm font-semibold text-gray-700">
-                  No documents found
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {searchQuery
-                    ? `No results for "${searchQuery}"`
-                    : "Try adjusting your filters."}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {visibleDocs.map((doc) => (
-                  <DocumentCard
-                    key={doc.id}
-                    item={doc}
-                    onClick={setSelectedDoc}
-                  />
-                ))}
-              </div>
+          <div className="relative shrink-0">
+            <button
+              ref={filterBtnRef}
+              type="button"
+              onClick={() =>
+                setFilterOpen((v) => !v)
+              }
+              className={cn(
+                "h-10 px-3 flex items-center gap-1.5 rounded-xl border",
+                filterOpen ||
+                  activeFilters.size > 0
+                  ? "border-[#D72638] text-[#D72638] bg-[#FEF0F1]"
+                  : "border-gray-200 text-gray-500 bg-white"
+              )}
+            >
+              <FilterIcon />
+              <ChevronDownIcon />
+            </button>
+
+            {filterOpen && (
+              <FilterDropdown
+                selected={activeFilters}
+                onChange={toggleFilter}
+                onClose={() =>
+                  setFilterOpen(false)
+                }
+                anchorRef={filterBtnRef}
+              />
             )}
           </div>
         </div>
 
-        {/* ── Reusable Document Detail Modal ──────────────────── */}
-        <Modal
-          isOpen={!!selectedDoc}
-          onClose={() => setSelectedDoc(null)}
-          title={selectedDoc?.title ?? ""}
-          body={selectedDoc?.body}
-          date={selectedDoc?.date}
-          images={selectedDoc?.images}
-        />
-      </AppShell>
+        {/* DOCUMENT LIST */}
+        <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
+          {loading ? (
+            <div className="py-16 text-center text-gray-400">
+              Loading documents...
+            </div>
+          ) : error ? (
+            <div className="py-16 text-center text-red-500">
+              {error}
+            </div>
+          ) : visibleDocs.length === 0 ? (
+            <div className="py-16 text-center text-gray-400">
+              No documents found.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleDocs.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  item={doc}
+                  onClick={setSelectedDoc}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL */}
+      <Modal
+        isOpen={!!selectedDoc}
+        onClose={() => setSelectedDoc(null)}
+        title={selectedDoc?.title ?? ""}
+        body={selectedDoc?.body}
+        date={selectedDoc?.date}
+        images={selectedDoc?.images ?? []}
+      />
+    </AppShell>
   );
 }
