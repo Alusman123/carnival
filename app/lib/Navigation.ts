@@ -17,8 +17,7 @@ export type NavigationAction =
   | "dashboardFeedback"
   | "dashboardUsers"
   | "dashboardReports"
-  | "dashboardSettings"
-  | "dashboardAdminFunction" ;
+  | "dashboardSettings";
 
 const ROUTES: Record<NavigationAction, string> = {
   // ── Auth ────────────────────────────────────────────────────
@@ -40,7 +39,6 @@ const ROUTES: Record<NavigationAction, string> = {
   dashboardUsers:       "/src/admin-page/dashboard/users",
   dashboardReports:     "/src/admin-page/dashboard/reports",
   dashboardSettings:    "/src/admin-page/dashboard/settings",
-  dashboardAdminFunction: "/src/admin-page/dashboard/admin-function",
 };
 
 // Routes that use replace() instead of push() — no Back button
