@@ -304,6 +304,23 @@ export const DASHBOARD_NAV: NavItem[] = [
   },
 ];
 
+// ── Route map for isActive checks (derived from Navigation.ts) ──
+const ACTION_PATHS: Partial<Record<NavigationAction, string>> = {
+  home: "/src/homepage/home",
+  documents: "/src/homepage/document",
+  flowGuide: "/flow-guide",
+  updates: "/updates",
+  feedback: "/feedback",
+  dashboard: "/src/admin-page/dashboard",
+  dashboardDocuments: "/src/admin-page/dashboard/document",
+  dashboardAccess: "/src/admin-page/dashboard/access",
+  dashboardFeedback: "/src/admin-page/dashboard/feedback",
+  dashboardUsers: "/src/admin-page/dashboard/users",
+  dashboardReports: "/src/admin-page/dashboard/reports",
+  dashboardSettings: "/src/admin-page/dashboard/settings",
+  dashboardAdminFunction: "/src/admin-page/dashboard/admin-function",
+};
+
 // ── Sidebar ────────────────────────────────────────────────────
 const Sidebar: React.FC<{
   nav: NavItem[];
@@ -356,40 +373,11 @@ const Sidebar: React.FC<{
       {/* Nav — uses navigate() instead of <Link href> */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5">
         {nav.map((item) => {
-          // Resolve the route string from Navigation.ts to check active state
-          // "home" is exact-match; all others use startsWith on the resolved path
+          const resolvedPath = ACTION_PATHS[item.action] ?? "";
           const isActive =
             item.action === "home"
-              ? pathname === "/"
-              : pathname.startsWith(
-                  // Strip query string for active check
-                  item.action === "dashboard"
-                    ? "/src/admin-page/dashboard"
-                    : item.action === "documents"
-                      ? "/documents"
-                      : item.action === "flowGuide"
-                        ? "/flow-guide"
-                        : item.action === "updates"
-                          ? "/updates"
-                          : item.action === "feedback"
-                            ? "/feedback"
-                            : item.action === "dashboardDocuments"
-                              ? "/src/admin-page/dashboard/documents"
-                              : item.action === "dashboardAccess"
-                                ? "/src/admin-page/dashboard/access"
-                                : item.action === "dashboardFeedback"
-                                  ? "/src/admin-page/dashboard/feedback"
-                                  : item.action === "dashboardUsers"
-                                    ? "/src/admin-page/dashboard/users"
-                                    : item.action === "dashboardReports"
-                                      ? "/src/admin-page/dashboard/reports"
-                                      : item.action === "dashboardSettings"
-                                        ? "/src/admin-page/dashboard/settings"
-                                        : item.action ===
-                                            "dashboardAdminFunction"
-                                          ? "/src/admin-page/dashboard/user-management"
-                                          : "",
-                );
+              ? pathname === resolvedPath
+              : pathname.startsWith(resolvedPath);
 
           return (
             <button
@@ -528,7 +516,7 @@ export interface AppShellProps {
   notifCount?: number;
   pageTitle?: string;
   showSearch?: boolean;
-  variant?: "home" | "dashboard";
+  variant?: "home" | "dashboard"; // now inferred from URL; prop ignored
   defaultExpanded?: boolean;
 }
 
@@ -539,12 +527,14 @@ export const AppShell: React.FC<AppShellProps> = ({
   notifCount = 3,
   pageTitle = "",
   showSearch = true,
-  variant = "home",
   defaultExpanded = true,
 }) => {
   const { navigate } = useNavigation();
+  const pathname = usePathname();
   const [expanded, setExpanded] = useState(defaultExpanded);
 
+  // Infer variant from URL — no longer relies on the prop being passed correctly
+  const variant = pathname.startsWith("/src/admin-page") ? "dashboard" : "home";
   const nav = variant === "dashboard" ? DASHBOARD_NAV : HOME_NAV;
   const sidebarW = expanded ? EXPANDED_W : COLLAPSED_W;
 
@@ -555,6 +545,12 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50 font-[family-name:var(--font-sans)]">
+      {expanded && (
+        <div
+          className="fixed inset-0 z-20"
+          onClick={() => setExpanded(false)}
+        />
+      )}
       <Sidebar
         nav={nav}
         expanded={expanded}

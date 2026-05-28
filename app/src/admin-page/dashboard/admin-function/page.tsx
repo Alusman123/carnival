@@ -1,970 +1,676 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
+// app/src/admin-page/dashboard/documents/page.tsx
+// ─────────────────────────────────────────────────────────────
+// Admin Documents page
+//
+// Features:
+//   • Search bar + Search button (full width)
+//   • Upload button → opens UploadModal (drag & drop + file browse)
+//   • Document list with delete trash icon per row
+//   • Delete confirmation modal (Cancel / Yes)
+//
+// DATA: every value marked // DATA — replace with real API calls.
+// ─────────────────────────────────────────────────────────────
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+import React, { useState, useRef, useEffect } from "react";
+import { AppShell } from "@/app/components/ui/Appshell";
+import { Button } from "@/app/components/ui/Button";
+import { cn } from "@/app/lib/utils";
 
-interface User {
-  _id: string;
-  username: string;
-  role: string;
-  isDisabled: boolean;
-  createdAt: string;
+// ══════════════════════════════════════════════════════════════
+// TYPES
+// ══════════════════════════════════════════════════════════════
+interface DocumentItem {
+  id: string;
+  title: string; // DATA: document.title
+  date: string; // DATA: document.createdAt formatted
+  fileUrl?: string; // DATA: document.fileUrl
 }
 
-interface Post {
-  _id: string;
-  title: string;
-  description: string;
-  photo: string;
-  content: string;
-  createdAt: string;
-  isHidden: boolean;
-  hiddenFrom: string[];
-  createdBy?: string;
-}
+// ══════════════════════════════════════════════════════════════
+// PLACEHOLDER DATA — replace with real API
+// ══════════════════════════════════════════════════════════════
+const INITIAL_DOCUMENTS: DocumentItem[] = [
+  {
+    id: "1",
+    title: "Suggestion to add more categories in Flow Guide.",
+    date: "May 20, 2026 • 10:30 AM",
+  },
+  {
+    id: "2",
+    title: "Document OCR accuracy can be improved.",
+    date: "May 19, 2026 • 04:15 PM",
+  },
+  {
+    id: "3",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "4",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "5",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "6",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "7",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "8",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "9",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+  {
+    id: "10",
+    title: "Need access to more reference articles.",
+    date: "May 18, 2026 • 11:20 AM",
+  },
+];
 
-export default function AdminFunctionPage() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [isAddDataModalOpen, setIsAddDataModalOpen] = useState(false);
-  const [isManagePostsModalOpen, setIsManagePostsModalOpen] = useState(false);
+// ══════════════════════════════════════════════════════════════
+// ICONS
+// ══════════════════════════════════════════════════════════════
+const DocFileIcon = () => (
+  <svg
+    className="w-5 h-5 shrink-0"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+  </svg>
+);
+const SearchIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+const PlusIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+const TrashIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+  </svg>
+);
+const BookmarkIcon = ({ filled }: { filled: boolean }) => (
+  <svg
+    className="w-4 h-4 transition-all duration-200"
+    viewBox="0 0 24 24"
+    fill={filled ? "#D72638" : "none"}
+    stroke="#D72638"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+  </svg>
+);
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [createLoading, setCreateLoading] = useState(false);
-  const [createMessage, setCreateMessage] = useState("");
-  const [createError, setCreateError] = useState("");
+const XIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+const UploadCloudIcon = () => (
+  <svg
+    className="w-10 h-10"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="16 16 12 12 8 16" />
+    <line x1="12" y1="12" x2="12" y2="21" />
+    <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
+  </svg>
+);
+const DiamondIcon = () => (
+  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2l10 10-10 10L2 12z" />
+  </svg>
+);
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [manageLoading, setManageLoading] = useState(false);
+// ══════════════════════════════════════════════════════════════
+// UPLOAD MODAL
+// ══════════════════════════════════════════════════════════════
+const UploadModal: React.FC<{
+  onClose: () => void;
+  onUpload: (files: File[]) => void;
+}> = ({ onClose, onUpload }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [postTitle, setPostTitle] = useState("");
-  const [postDescription, setPostDescription] = useState("");
-  const [postPhoto, setPostPhoto] = useState("");
-  const [postContent, setPostContent] = useState("");
-  const [postLoading, setPostLoading] = useState(false);
-  const [postMessage, setPostMessage] = useState("");
-  const [postError, setPostError] = useState("");
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editMessage, setEditMessage] = useState("");
-  const [editError, setEditError] = useState("");
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = () => setIsDragging(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
+  };
+  const handleBrowse = () => fileInputRef.current?.click();
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files)
+      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+  };
+  const removeFile = (idx: number) =>
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
 
-  const [hideFromPost, setHideFromPost] = useState<Post | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-
-  const getToken = () => localStorage.getItem("token");
-
-  // Helper function to get auth headers
-  const getAuthHeaders = () => ({
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
-  });
-
-  const fetchUsers = async () => {
-    setManageLoading(true);
-
+  // ── Upload handler ─────────────────────────────────────────
+  // TODO: replace the simulated delay with your real upload API:
+  // const formData = new FormData();
+  // files.forEach(f => formData.append("files", f));
+  // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/documents/upload`, {
+  //   method: "POST", body: formData,
+  //   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  // });
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+    setIsUploading(true);
     try {
-      const res = await axios.get(`${API}/api/admin/users`, getAuthHeaders());
-      setUsers(res.data.users);
-    } catch (err: any) {
-      console.error("Error fetching users:", err.response?.data || err);
-      if (err.response?.status === 403) {
-        alert("You don't have permission to view users. Admin access required.");
-      }
+      await new Promise((r) => setTimeout(r, 1000)); // simulate upload
+      onUpload(files);
+      onClose();
     } finally {
-      setManageLoading(false);
+      setIsUploading(false);
     }
   };
-
-  const fetchPosts = async () => {
-    setPostsLoading(true);
-
-    try {
-      const res = await axios.get(`${API}/api/posts/admin/all`, getAuthHeaders());
-      setPosts(res.data.posts);
-    } catch (err: any) {
-      console.error("Error fetching posts:", err.response?.data || err);
-      if (err.response?.status === 403) {
-        alert("You don't have permission to view posts. Admin access required.");
-      }
-    } finally {
-      setPostsLoading(false);
-    }
-  };
-
-  const handleCreate = async () => {
-    setCreateMessage("");
-    setCreateError("");
-
-    if (!username || !password) {
-      setCreateError("Username and password are required.");
-      return;
-    }
-
-    setCreateLoading(true);
-
-    try {
-      await axios.post(
-        `${API}/api/admin/users`,
-        {
-          username,
-          password,
-        },
-        getAuthHeaders()
-      );
-
-      setCreateMessage("✅ User created successfully!");
-      setUsername("");
-      setPassword("");
-      
-      // Refresh user list if modal is open
-      if (isManageModalOpen) {
-        fetchUsers();
-      }
-    } catch (err: any) {
-      setCreateError(
-        err.response?.data?.error || "Failed to create user."
-      );
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  const handleAddPost = async () => {
-    setPostMessage("");
-    setPostError("");
-
-    if (!postTitle || !postDescription || !postContent) {
-      setPostError("Title, description and content are required.");
-      return;
-    }
-
-    setPostLoading(true);
-
-    try {
-      await axios.post(
-        `${API}/api/posts`,
-        {
-          title: postTitle,
-          description: postDescription,
-          photo: postPhoto || "",
-          content: postContent,
-        },
-        getAuthHeaders()
-      );
-
-      setPostMessage("✅ Post created successfully!");
-      
-      setPostTitle("");
-      setPostDescription("");
-      setPostPhoto("");
-      setPostContent("");
-      
-      // Refresh posts list if modal is open
-      if (isManagePostsModalOpen) {
-        fetchPosts();
-      }
-      
-      // Auto-close modal after 2 seconds
-      setTimeout(() => {
-        setIsAddDataModalOpen(false);
-        setPostMessage("");
-      }, 2000);
-    } catch (err: any) {
-      setPostError(
-        err.response?.data?.error || "Failed to create post."
-      );
-    } finally {
-      setPostLoading(false);
-    }
-  };
-
-  const handleDeletePost = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
-
-    try {
-      await axios.delete(`${API}/api/posts/${id}`, getAuthHeaders());
-      setPosts((prev) => prev.filter((p) => p._id !== id));
-    } catch (err: any) {
-      console.error("Error deleting post:", err.response?.data || err);
-      alert("Failed to delete post. " + (err.response?.data?.error || ""));
-    }
-  };
-
-  const handleEditPost = async () => {
-    if (!editingPost) return;
-
-    setEditMessage("");
-    setEditError("");
-    setEditLoading(true);
-
-    try {
-      const res = await axios.put(
-        `${API}/api/posts/${editingPost._id}`,
-        {
-          title: editingPost.title,
-          description: editingPost.description,
-          photo: editingPost.photo || "",
-          content: editingPost.content,
-        },
-        getAuthHeaders()
-      );
-
-      setEditMessage("✅ Post updated successfully!");
-      
-      setPosts((prev) =>
-        prev.map((p) =>
-          p._id === editingPost._id ? res.data.post : p
-        )
-      );
-      
-      // Close edit modal after 1 second
-      setTimeout(() => {
-        setEditingPost(null);
-        setEditMessage("");
-      }, 1000);
-    } catch (err: any) {
-      setEditError(
-        err.response?.data?.error || "Failed to update post."
-      );
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const handleToggleHide = async (id: string) => {
-    try {
-      const res = await axios.patch(
-        `${API}/api/posts/${id}/toggle-hide`,
-        {},
-        getAuthHeaders()
-      );
-
-      setPosts((prev) =>
-        prev.map((p) =>
-          p._id === id
-            ? { ...p, isHidden: res.data.isHidden }
-            : p
-        )
-      );
-    } catch (err: any) {
-      console.error("Error toggling hide:", err.response?.data || err);
-      alert("Failed to toggle post visibility. " + (err.response?.data?.error || ""));
-    }
-  };
-
-  const handleHideFromUser = async (
-    postId: string,
-    userId: string,
-    hide: boolean
-  ) => {
-    if (!userId) {
-      alert("Please select a user first");
-      return;
-    }
-
-    try {
-      const res = await axios.patch(
-        `${API}/api/posts/${postId}/hide-from-user`,
-        {
-          userId,
-          hide,
-        },
-        getAuthHeaders()
-      );
-
-      setPosts((prev) =>
-        prev.map((p) =>
-          p._id === postId
-            ? { ...p, hiddenFrom: res.data.hiddenFrom }
-            : p
-        )
-      );
-
-      setHideFromPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              hiddenFrom: res.data.hiddenFrom,
-            }
-          : null
-      );
-      
-      alert(`Post ${hide ? "hidden from" : "made visible to"} user successfully`);
-    } catch (err: any) {
-      console.error("Error updating user visibility:", err.response?.data || err);
-      alert("Failed to update post visibility for user. " + (err.response?.data?.error || ""));
-    }
-  };
-
-  const handleToggle = async (id: string) => {
-    try {
-      const res = await axios.patch(
-        `${API}/api/admin/users/${id}/toggle`,
-        {},
-        getAuthHeaders()
-      );
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u._id === id
-            ? {
-                ...u,
-                isDisabled: res.data.isDisabled,
-              }
-            : u
-        )
-      );
-    } catch (err: any) {
-      console.error("Error toggling user:", err.response?.data || err);
-      alert("Failed to toggle user status. " + (err.response?.data?.error || ""));
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
-    try {
-      await axios.delete(`${API}/api/admin/users/${id}`, getAuthHeaders());
-      setUsers((prev) => prev.filter((u) => u._id !== id));
-    } catch (err: any) {
-      console.error("Error deleting user:", err.response?.data || err);
-      alert("Failed to delete user. " + (err.response?.data?.error || ""));
-    }
-  };
-
-  // Create Account Modal
-  const CreateAccountModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Create Account</h2>
-          <button
-            onClick={() => {
-              setIsCreateModalOpen(false);
-              setUsername("");
-              setPassword("");
-              setCreateMessage("");
-              setCreateError("");
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-6">
-          {createMessage && (
-            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-              {createMessage}
-            </div>
-          )}
-          
-          {createError && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-              {createError}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter username"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter password"
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={() => setIsCreateModalOpen(false)}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={createLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {createLoading ? "Creating..." : "Create User"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Manage Accounts Modal
-  const ManageAccountsModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Manage Accounts</h2>
-          <button
-            onClick={() => setIsManageModalOpen(false)}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-6">
-          {manageLoading ? (
-            <p>Loading users...</p>
-          ) : users.length === 0 ? (
-            <p>No users found.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-3">Username</th>
-                  <th className="pb-3">Role</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Created</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3">{user.username}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        user.isDisabled 
-                          ? 'bg-red-100 text-red-700' 
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {user.isDisabled ? "Disabled" : "Active"}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleToggle(user._id)}
-                          className="px-3 py-1 rounded-md text-xs bg-yellow-100 hover:bg-yellow-200"
-                        >
-                          {user.isDisabled ? "Enable" : "Disable"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user._id)}
-                          className="px-3 py-1 rounded-md text-xs bg-red-100 hover:bg-red-200"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Add Data Modal
-  const AddDataModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Add New Post</h2>
-          <button
-            onClick={() => {
-              setIsAddDataModalOpen(false);
-              setPostTitle("");
-              setPostDescription("");
-              setPostPhoto("");
-              setPostContent("");
-              setPostMessage("");
-              setPostError("");
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-6">
-          {postMessage && (
-            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-              {postMessage}
-            </div>
-          )}
-          
-          {postError && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-              {postError}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title *
-              </label>
-              <input
-                type="text"
-                value={postTitle}
-                onChange={(e) => setPostTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter post title"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description *
-              </label>
-              <textarea
-                value={postDescription}
-                onChange={(e) => setPostDescription(e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter post description"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Photo URL
-              </label>
-              <input
-                type="text"
-                value={postPhoto}
-                onChange={(e) => setPostPhoto(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter photo URL (optional)"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Content *
-              </label>
-              <textarea
-                value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter post content"
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={() => setIsAddDataModalOpen(false)}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleAddPost}
-            disabled={postLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {postLoading ? "Creating..." : "Create Post"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Edit Post Modal
-  const EditPostModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Edit Post</h2>
-          <button
-            onClick={() => {
-              setEditingPost(null);
-              setEditMessage("");
-              setEditError("");
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-6">
-          {editMessage && (
-            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-              {editMessage}
-            </div>
-          )}
-          
-          {editError && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-              {editError}
-            </div>
-          )}
-          
-          {editingPost && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={editingPost.title}
-                  onChange={(e) => setEditingPost({...editingPost, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
-                </label>
-                <textarea
-                  value={editingPost.description}
-                  onChange={(e) => setEditingPost({...editingPost, description: e.target.value})}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Photo URL
-                </label>
-                <input
-                  type="text"
-                  value={editingPost.photo}
-                  onChange={(e) => setEditingPost({...editingPost, photo: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Content *
-                </label>
-                <textarea
-                  value={editingPost.content}
-                  onChange={(e) => setEditingPost({...editingPost, content: e.target.value})}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={() => setEditingPost(null)}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleEditPost}
-            disabled={editLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {editLoading ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Hide From User Modal
-  const HideFromUserModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Hide Post From User: {hideFromPost?.title}
-          </h2>
-          <button
-            onClick={() => {
-              setHideFromPost(null);
-              setSelectedUserId("");
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select User
-              </label>
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a user...</option>
-                {users.filter(u => u.role !== 'admin').map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.username} {user.isDisabled ? "(Disabled)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {hideFromPost && selectedUserId && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleHideFromUser(hideFromPost._id, selectedUserId, true)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Hide from User
-                </button>
-                <button
-                  onClick={() => handleHideFromUser(hideFromPost._id, selectedUserId, false)}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Show to User
-                </button>
-              </div>
-            )}
-            
-            {hideFromPost && hideFromPost.hiddenFrom.length > 0 && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Currently hidden from:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {hideFromPost.hiddenFrom.map((userId) => {
-                    const user = users.find(u => u._id === userId);
-                    return user ? (
-                      <span key={userId} className="px-2 py-1 bg-gray-200 rounded-md text-xs">
-                        {user.username}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Manage Posts Modal
-  const ManagePostsModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Manage Posts</h2>
-          <button
-            onClick={() => {
-              setIsManagePostsModalOpen(false);
-              setEditingPost(null);
-              setHideFromPost(null);
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="p-6">
-          {postsLoading ? (
-            <p>Loading posts...</p>
-          ) : posts.length === 0 ? (
-            <p>No posts found.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-3">Title</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Created</th>
-                  <th className="pb-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((post) => (
-                  <tr key={post._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 font-medium">{post.title}</td>
-                    <td className="py-3">
-                      {post.isHidden ? (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">Hidden</span>
-                      ) : (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Visible</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => setEditingPost(post)}
-                          className="px-3 py-1 rounded-md text-xs bg-blue-100 hover:bg-blue-200"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleToggleHide(post._id)}
-                          className="px-3 py-1 rounded-md text-xs bg-yellow-100 hover:bg-yellow-200"
-                        >
-                          Toggle Hide
-                        </button>
-                        <button
-                          onClick={() => {
-                            setHideFromPost(post);
-                            fetchUsers();
-                          }}
-                          className="px-3 py-1 rounded-md text-xs bg-orange-100 hover:bg-orange-200"
-                        >
-                          Hide From
-                        </button>
-                        <button
-                          onClick={() => handleDeletePost(post._id)}
-                          className="px-3 py-1 rounded-md text-xs bg-red-100 hover:bg-red-200"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex flex-row gap-6 p-8">
-          {/* ACCOUNT COLUMN */}
-          <div className="flex flex-col gap-4 flex-1">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
-              Account Management
-            </h3>
-
-            <div
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-base font-semibold text-gray-900">
-                Create Account
-              </h2>
-              <p className="text-sm text-gray-500">
-                Add a new user account to the system.
-              </p>
-            </div>
-
-            <div
-              onClick={() => {
-                setIsManageModalOpen(true);
-                fetchUsers();
-              }}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-base font-semibold text-gray-900">
-                Manage Accounts
-              </h2>
-              <p className="text-sm text-gray-500">
-                View, edit, or deactivate existing user accounts.
-              </p>
-            </div>
-          </div>
-
-          {/* DATA COLUMN */}
-          <div className="flex flex-col gap-4 flex-1">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
-              Content Management
-            </h3>
-
-            <div
-              onClick={() => setIsAddDataModalOpen(true)}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-base font-semibold text-gray-900">
-                Add Post
-              </h2>
-              <p className="text-sm text-gray-500">
-                Create a new blog post.
-              </p>
-            </div>
-
-            <div
-              onClick={() => {
-                setIsManagePostsModalOpen(true);
-                fetchPosts();
-                fetchUsers();
-              }}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-base font-semibold text-gray-900">
-                Manage Posts
-              </h2>
-              <p className="text-sm text-gray-500">
-                View, edit, hide, and delete posts.
-              </p>
-            </div>
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl font-[family-name:var(--font-sans)]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Upload</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors focus:outline-none"
+          >
+            <XIcon />
+          </button>
         </div>
 
-        {/* Modals */}
-        {isCreateModalOpen && <CreateAccountModal />}
-        {isManageModalOpen && <ManageAccountsModal />}
-        {isAddDataModalOpen && <AddDataModal />}
-        {isManagePostsModalOpen && <ManagePostsModal />}
-        {editingPost && <EditPostModal />}
-        {hideFromPost && <HideFromUserModal />}
+        <div className="px-5 py-5 space-y-4">
+          {/* Drop zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={handleBrowse}
+            className={cn(
+              "flex flex-col items-center justify-center gap-3 rounded-xl",
+              "border-2 border-dashed transition-all duration-200 cursor-pointer",
+              "py-10 px-6 text-center",
+              isDragging
+                ? "border-[#D72638] bg-[#FEF0F1]"
+                : "border-gray-300 bg-gray-50 hover:border-[#D72638]/50 hover:bg-[#FEF0F1]/30",
+            )}
+          >
+            <span
+              className={cn(
+                "transition-colors duration-200",
+                isDragging ? "text-[#D72638]" : "text-[#D72638]/60",
+              )}
+            >
+              <UploadCloudIcon />
+            </span>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Drag or drop files, or{" "}
+              <span className="text-[#D72638] font-semibold underline">
+                Browse
+              </span>
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileInput}
+            />
+          </div>
+
+          {/* Selected file list */}
+          {files.length > 0 && (
+            <ul className="space-y-1.5 max-h-32 overflow-y-auto">
+              {files.map((file, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[#D72638] shrink-0">
+                      <DocFileIcon />
+                    </span>
+                    <span className="text-xs text-gray-700 truncate">
+                      {file.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(idx);
+                    }}
+                    className="text-gray-400 hover:text-[#D72638] transition-colors focus:outline-none shrink-0"
+                  >
+                    <XIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Upload button */}
+          <Button
+            label="Upload"
+            variant="primary"
+            size="md"
+            fullWidth
+            isLoading={isUploading}
+            disabled={files.length === 0}
+            onClick={handleUpload}
+          />
+        </div>
       </div>
-    </ProtectedRoute>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// DELETE CONFIRMATION MODAL
+// ══════════════════════════════════════════════════════════════
+const DeleteModal: React.FC<{
+  onCancel: () => void;
+  onConfirm: () => void;
+  isDeleting?: boolean;
+}> = ({ onCancel, onConfirm, isDeleting = false }) => {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+      if (e.key === "Enter" && !isDeleting) onConfirm();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onCancel, onConfirm, isDeleting]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="w-full max-w-xs bg-white rounded-2xl shadow-2xl p-5 font-[family-name:var(--font-sans)]">
+        {/* Title with diamond icon — matches the image */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[#D72638]">
+            <DiamondIcon />
+          </span>
+          <h2 className="text-base font-bold text-gray-900">Delete</h2>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+          Are you sure you want to delete this Documents?
+        </p>
+
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            label="Cancel"
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={isDeleting}
+          />
+          <Button
+            label="Yes"
+            variant="primary"
+            size="sm"
+            isLoading={isDeleting}
+            onClick={onConfirm}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// DOCUMENT CARD ROW
+// ══════════════════════════════════════════════════════════════
+const DocumentCard: React.FC<{
+  item: DocumentItem;
+  isSaved: boolean;
+  onSave: (id: string) => void;
+  onDelete: (item: DocumentItem) => void;
+  onClick: (item: DocumentItem) => void;
+}> = ({ item, isSaved, onSave, onDelete, onClick }) => (
+  <div
+    className={cn(
+      "flex items-center gap-3 px-4 py-3 rounded-xl",
+      "border border-gray-200 bg-white",
+      "hover:border-[#D72638]/40 hover:shadow-sm",
+      "transition-all duration-150 group",
+    )}
+  >
+    {/* Left: icon + text — clicking opens detail view */}
+    <button
+      type="button"
+      onClick={() => onClick(item)}
+      className="flex items-center gap-3 flex-1 min-w-0 text-left focus:outline-none"
+    >
+      <div className="text-[#D72638] shrink-0">
+        <DocFileIcon />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#D72638] transition-colors duration-150">
+          {item.title}
+        </p>
+        <p className="text-xs text-gray-400 mt-0.5">{item.date}</p>
+      </div>
+    </button>
+
+    {/* Bookmark / Save button */}
+    <button
+      type="button"
+      onClick={() => onSave(item.id)}
+      aria-label={isSaved ? "Unsave document" : "Save document"}
+      className={cn(
+        "shrink-0 w-8 h-8 flex items-center justify-center rounded-full",
+        "transition-all duration-150 focus:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+        isSaved ? "bg-[#FEF0F1]" : "hover:bg-[#FEF0F1]",
+      )}
+    >
+      <BookmarkIcon filled={isSaved} />
+    </button>
+
+    {/* Delete button */}
+    <button
+      type="button"
+      onClick={() => onDelete(item)}
+      aria-label={`Delete ${item.title}`}
+      className={cn(
+        "shrink-0 w-8 h-8 flex items-center justify-center rounded-lg",
+        "text-[#D72638]/50 hover:text-[#D72638] hover:bg-[#FEF0F1]",
+        "transition-all duration-150 focus:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-[#D72638]/30",
+      )}
+    >
+      <TrashIcon />
+    </button>
+  </div>
+);
+
+// ══════════════════════════════════════════════════════════════
+// ADMIN DOCUMENTS PAGE
+// ══════════════════════════════════════════════════════════════
+export default function AdminDocumentsPage() {
+  const username = "Admin"; // DATA: auth context → user.name
+  const notifCount = 5; // DATA: notification API → unread count
+
+  const [documents, setDocuments] = useState<DocumentItem[]>(INITIAL_DOCUMENTS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  // Tracks saved document IDs — DATA: init from API (user's saved list)
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  // Client-side filter — DATA: replace with real API call
+  const visibleDocs = documents.filter(
+    (doc) =>
+      searchQuery.trim() === "" ||
+      doc.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  // ── Search ─────────────────────────────────────────────────
+  // TODO: replace with API call
+  const handleSearch = () => {
+    console.log("Search:", searchQuery);
+  };
+
+  // ── Toggle save ──────────────────────────────────────────────
+  // TODO: wire to real API:
+  // await fetch(`${API}/api/documents/${id}/save`, {
+  //   method: savedIds.has(id) ? "DELETE" : "POST",
+  //   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  // });
+  const toggleSave = (id: string) => {
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  // ── Upload callback ────────────────────────────────────────
+  // TODO: re-fetch from API instead of inserting local mock items
+  const handleUpload = (files: File[]) => {
+    const newDocs: DocumentItem[] = files.map((file, i) => ({
+      id: `new-${Date.now()}-${i}`,
+      title: file.name,
+      date: new Date().toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    }));
+    setDocuments((prev) => [...newDocs, ...prev]);
+  };
+
+  // ── Delete confirm ─────────────────────────────────────────
+  // TODO: call DELETE /api/documents/:id then refresh list
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await new Promise((r) => setTimeout(r, 600)); // simulate API
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <AppShell
+      variant="dashboard"
+      pageTitle="Documents"
+      username={username}
+      notifCount={notifCount}
+      showSearch={false}
+    >
+      <div className="w-full space-y-4">
+        {/* ── Search bar ────────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none [&>svg]:w-4 [&>svg]:h-4">
+              <SearchIcon />
+            </span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search article, document..."
+              className={cn(
+                "w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white",
+                "text-sm text-gray-900 placeholder-gray-400",
+                "focus:outline-none focus:ring-2 focus:ring-[#D72638]/20 focus:border-[#D72638]",
+                "transition-all duration-200 [&::-webkit-search-cancel-button]:hidden",
+              )}
+            />
+          </div>
+          <Button
+            label="Search"
+            variant="primary"
+            size="md"
+            leftIcon={<SearchIcon />}
+            onClick={handleSearch}
+            className="shrink-0"
+          />
+        </div>
+
+        {/* ── Upload button ──────────────────────────────────── */}
+        <Button
+          label="Upload"
+          variant="outline"
+          size="sm"
+          leftIcon={<PlusIcon />}
+          onClick={() => setUploadOpen(true)}
+        />
+
+        {/* ── Document list ──────────────────────────────────── */}
+        <div className="rounded-2xl border border-[#D72638]/30 bg-white p-4">
+          {visibleDocs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-12 h-12 rounded-full bg-[#FEF0F1] flex items-center justify-center text-[#D72638] mb-4">
+                <DocFileIcon />
+              </div>
+              <p className="text-sm font-semibold text-gray-700">
+                No documents found
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {searchQuery
+                  ? `No results for "${searchQuery}"`
+                  : "Upload a document to get started."}
+              </p>
+            </div>
+          ) : (
+            // DATA: replace visibleDocs with real API data
+            <div className="space-y-2">
+              {visibleDocs.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  item={doc}
+                  isSaved={savedIds.has(doc.id)}
+                  onSave={toggleSave}
+                  onDelete={(d) => setDeleteTarget(d)}
+                  onClick={(d) => {
+                    // TODO: open document detail modal or navigate
+                    console.log("View document:", d.id);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Upload Modal ───────────────────────────────────── */}
+      {uploadOpen && (
+        <UploadModal
+          onClose={() => setUploadOpen(false)}
+          onUpload={handleUpload}
+        />
+      )}
+
+      {/* ── Delete Confirmation Modal ──────────────────────── */}
+      {deleteTarget && (
+        <DeleteModal
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      )}
+    </AppShell>
   );
 }
