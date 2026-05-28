@@ -8,39 +8,11 @@ interface Props {
   requiredRole?: "admin" | "user";
 }
 
-const DEV_ACCOUNTS = {
-  admin: {
-    token: "dev-token",
-    user: { id: "dev-admin", username: "devadmin", role: "admin" },
-  },
-  user: {
-    token: "dev-token",
-    user: { id: "dev-user", username: "devuser", role: "user" },
-  },
-};
-
-const isDev = process.env.NODE_ENV === "development";
-
 export default function ProtectedRoute({ children, requiredRole }: Props) {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    // ── DEV BYPASS ──────────────────────────────────────────
-    // Works only on localhost (development mode)
-    // Automatically disabled on Vercel (production)
-    if (isDev) {
-      const devAccount = requiredRole
-        ? DEV_ACCOUNTS[requiredRole]
-        : DEV_ACCOUNTS["user"];
-
-      localStorage.setItem("token", devAccount.token);
-      localStorage.setItem("user", JSON.stringify(devAccount.user));
-      setAuthorized(true);
-      return;
-    }
-    // ────────────────────────────────────────────────────────
-
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
 
@@ -49,23 +21,26 @@ export default function ProtectedRoute({ children, requiredRole }: Props) {
       return;
     }
 
+    let user;
+
     try {
-      const user = JSON.parse(userStr);
-
-      if (requiredRole && user.role !== requiredRole) {
-        if (user.role === "admin") {
-          router.replace("/src/dashboard");
-        } else {
-          router.replace("/src/auth/sign-in");
-        }
-        return;
-      }
-
-      setAuthorized(true);
+      user = JSON.parse(userStr);
     } catch {
       router.replace("/src/auth/sign-in");
+      return;
     }
-  }, []);
+
+    if (requiredRole && user.role !== requiredRole) {
+      if (user.role === "admin") {
+        router.replace("/src/admin-page/dashboard");
+      } else {
+        router.replace("/src/homepage/home");
+      }
+      return;
+    }
+
+    setAuthorized(true);
+  }, [router, requiredRole]);
 
   if (!authorized) {
     return (
